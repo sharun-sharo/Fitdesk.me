@@ -101,7 +101,10 @@ export function EditClientDialog({ client, open, onOpenChange }: Props) {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast({ title: data.error || "Failed to update client", variant: "destructive" });
+        const msg = data.error && !/^\d+\s*error(s)?$/i.test(String(data.error).trim())
+          ? data.error
+          : "Failed to update client";
+        toast({ title: msg, variant: "destructive" });
         return;
       }
       toast({ title: "Client updated", variant: "success" });

@@ -22,7 +22,14 @@ export async function GET(request: Request) {
     type Where = {
       isActive?: boolean;
       subscriptionPlanId?: string | null;
-      OR?: Array<{ name?: { contains: string; mode: "insensitive" }; owner?: { name?: { contains: string; mode: "insensitive" }; email?: { contains: string; mode: "insensitive" } } }>;
+      OR?: Array<{
+        name?: { contains: string; mode: "insensitive" };
+        owner?: {
+          name?: { contains: string; mode: "insensitive" };
+          email?: { contains: string; mode: "insensitive" };
+          phone?: { contains: string; mode: "insensitive" };
+        };
+      }>;
     };
     const where: Where = {};
     if (search) {

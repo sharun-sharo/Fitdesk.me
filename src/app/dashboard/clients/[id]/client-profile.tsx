@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatCurrency, formatDate, isExpiringWithinDays } from "@/lib/utils";
-import { ArrowLeft, User, IndianRupee, Pencil, Calendar, History, CreditCard, Plus } from "lucide-react";
+import { ArrowLeft, User, IndianRupee, Pencil, Calendar, History, CreditCard, Plus, Upload, Camera, Trash2 } from "lucide-react";
 import { EditClientDialog } from "./edit-client-dialog";
 import { useToast } from "@/hooks/use-toast";
 
@@ -33,6 +33,7 @@ type Client = {
   phone: string | null;
   email: string | null;
   address: string | null;
+  profilePhoto: string | null;
   joinDate: string;
   dateOfBirth: string | null;
   subscriptionStartDate: string | null;
@@ -45,10 +46,20 @@ type Client = {
   history?: ClientHistoryEntry[];
 };
 
+function normalizeError(msg: string | undefined): string {
+  if (!msg || msg.trim() === "" || /^\d+\s*error(s)?$/i.test(msg.trim())) {
+    return "Something went wrong. Please try again.";
+  }
+  return msg;
+}
+
 export function ClientProfile({ client }: { client: Client }) {
   const router = useRouter();
   const { toast } = useToast();
   const [editOpen, setEditOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [deletingPhoto, setDeletingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [subscriptionFormOpen, setSubscriptionFormOpen] = useState(false);
   const [endDatePickerOpen, setEndDatePickerOpen] = useState(false);
   const [subForm, setSubForm] = useState({
@@ -93,7 +104,7 @@ export function ClientProfile({ client }: { client: Client }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast({ title: data.error || "Failed to update subscription", variant: "destructive" });
+        toast({ title: normalizeError(data.error) || "Failed to update subscription", variant: "destructive" });
         return;
       }
       toast({ title: "Subscription updated", variant: "success" });
@@ -106,6 +117,62 @@ export function ClientProfile({ client }: { client: Client }) {
     }
   }
 
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("photo", file);
+      const res = await fetch(`/api/dashboard/clients/${client.id}/photo`, {
+        method: "POST",
+        body: formData,
+      });
+      let data: { error?: string; profilePhoto?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        toast({ title: "Upload failed. Please try again.", variant: "destructive" });
+        return;
+      }
+      if (!res.ok) {
+        toast({ title: normalizeError(data.error) || "Upload failed", variant: "destructive" });
+        return;
+      }
+      toast({ title: "Profile photo updated", variant: "success" });
+      router.refresh();
+    } catch (err) {
+      console.error("Profile photo upload error:", err);
+      toast({ title: "Upload failed. Please try again.", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  async function handleDeletePhoto() {
+    setDeletingPhoto(true);
+    try {
+      const res = await fetch(`/api/dashboard/clients/${client.id}/photo`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast({ title: normalizeError(data.error) || "Failed to remove photo", variant: "destructive" });
+        return;
+      }
+      toast({ title: "Profile photo removed", variant: "success" });
+      router.refresh();
+    } catch {
+      toast({ title: "Failed to remove photo", variant: "destructive" });
+    } finally {
+      setDeletingPhoto(false);
+    }
+  }
+
+  const initial = client.fullName.trim().slice(0, 2).toUpperCase();
+  const photoUrl = client.profilePhoto ?? null;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -115,9 +182,64 @@ export function ClientProfile({ client }: { client: Client }) {
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{client.fullName}</h1>
-            <p className="text-muted-foreground">Client profile</p>
+          <div className="flex items-center gap-4">
+            <div className="relative group">
+              <div className="h-20 w-20 rounded-full overflow-hidden border-2 border-border bg-muted flex items-center justify-center shrink-0">
+                {photoUrl ? (
+                  <img src={photoUrl} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-2xl font-semibold text-muted-foreground">{initial}</span>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                className="hidden"
+                onChange={handlePhotoUpload}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="absolute -bottom-1 left-1/2 -translate-x-1/2 rounded-full h-8 w-8 p-0 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                title="Upload photo"
+              >
+                <Camera className="h-4 w-4" />
+              </Button>
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">{client.fullName}</h1>
+              <p className="text-muted-foreground">Client profile</p>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-lg gap-1.5"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+              >
+                <Upload className="h-4 w-4" />
+                {uploading ? "Uploading…" : "Upload photo"}
+              </Button>
+              {photoUrl && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={handleDeletePhoto}
+                  disabled={deletingPhoto}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {deletingPhoto ? "Removing…" : "Delete photo"}
+                </Button>
+              )}
+            </div>
+            </div>
           </div>
         </div>
         </div>

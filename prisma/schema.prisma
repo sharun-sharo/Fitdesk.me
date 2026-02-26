@@ -79,6 +79,7 @@ model Client {
   phone                 String?
   email                 String?
   address               String?
+  profilePhoto          String?            // URL or path to uploaded image
   dateOfBirth           DateTime?
   joinDate              DateTime           @default(now())
   subscriptionStartDate DateTime?

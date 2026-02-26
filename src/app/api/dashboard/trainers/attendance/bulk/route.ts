@@ -18,7 +18,9 @@ export async function POST(request: Request) {
     }
     const body = await request.json();
     const dateStr = typeof body.date === "string" ? body.date : null;
-    const trainerIds = Array.isArray(body.trainerIds) ? body.trainerIds.filter((id) => typeof id === "string") as string[] : [];
+    const trainerIds = Array.isArray(body.trainerIds)
+      ? body.trainerIds.filter((id: unknown): id is string => typeof id === "string")
+      : [];
     if (!dateStr || trainerIds.length === 0) {
       return NextResponse.json({ error: "Date and trainerIds required" }, { status: 400 });
     }

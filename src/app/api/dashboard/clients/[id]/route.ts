@@ -72,6 +72,7 @@ export async function PATCH(
     if (body.phone !== undefined) data.phone = body.phone;
     if (body.email !== undefined) data.email = body.email;
     if (body.address !== undefined) data.address = body.address;
+    if (body.profilePhoto !== undefined) data.profilePhoto = typeof body.profilePhoto === "string" ? body.profilePhoto.trim() || null : null;
     if (body.dateOfBirth !== undefined)
       data.dateOfBirth = body.dateOfBirth ? new Date(body.dateOfBirth) : null;
     if (body.subscriptionStartDate !== undefined)
@@ -85,7 +86,8 @@ export async function PATCH(
     const validStatuses = ["ACTIVE", "EXPIRED", "CANCELLED"] as const;
     if (body.subscriptionStatus !== undefined) {
       const s = String(body.subscriptionStatus).toUpperCase();
-      if (validStatuses.includes(s)) data.subscriptionStatus = s;
+      if (validStatuses.includes(s as (typeof validStatuses)[number]))
+        data.subscriptionStatus = s as (typeof validStatuses)[number];
     }
     if (typeof body.totalAmount === "number")
       data.totalAmount = new Decimal(body.totalAmount);
