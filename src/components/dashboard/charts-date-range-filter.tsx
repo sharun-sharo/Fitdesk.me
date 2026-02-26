@@ -14,10 +14,11 @@ import { useDashboardFilters } from "@/hooks/useDashboardFilters";
 import type { DashboardRangePreset } from "@/lib/dashboard-filter-store";
 
 const PRESETS: { value: DashboardRangePreset; label: string }[] = [
-  { value: "all", label: "All time" },
-  { value: "this_year", label: "This year" },
-  { value: "this_month", label: "This month" },
-  { value: "last_month", label: "Last month" },
+  { value: "all", label: "All-time" },
+  { value: "7d", label: "Last 7 days" },
+  { value: "30d", label: "Last 30 days" },
+  { value: "3m", label: "Last 3 months" },
+  { value: "6m", label: "Last 6 months" },
   { value: "custom", label: "Custom range" },
 ];
 

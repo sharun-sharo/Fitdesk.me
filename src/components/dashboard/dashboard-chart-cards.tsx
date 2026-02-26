@@ -39,36 +39,45 @@ type ActiveVsExpiredCardProps = {
 };
 
 export function ClientGrowthCard({ clientGrowth, rangeLabel }: ChartCardProps) {
-  return React.createElement(Card, { className: CARD_BASE },
-    React.createElement(CardHeader, { className: "flex flex-col gap-3" },
-      React.createElement("div", null,
-        React.createElement(CardTitle, { className: "text-lg font-bold tracking-tight" }, "Client Growth"),
-        React.createElement("p", { className: "mt-0.5 text-sm font-medium text-muted-foreground" },
-          rangeLabel ? `Showing: ${rangeLabel} · Cumulative clients` : "Cumulative · Cumulative clients")
-      ),
-      React.createElement("div", null, React.createElement(ChartsDateRangeFilter, null))
-    ),
-    React.createElement(CardContent, null,
-      React.createElement("div", { className: "h-[300px]" },
-        React.createElement(ResponsiveContainer, { width: "100%", height: "100%" },
-          React.createElement(BarChart, { data: clientGrowth, margin: { top: 5, right: 10, left: 0, bottom: 0 } },
-            React.createElement(CartesianGrid, { strokeDasharray: "3 3", className: "stroke-muted/50" }),
-            React.createElement(XAxis, { dataKey: "month", className: "text-xs font-medium", tick: { fill: "hsl(var(--muted-foreground))" } }),
-            React.createElement(YAxis, { className: "text-xs font-medium", tick: { fill: "hsl(var(--muted-foreground))" } }),
-            React.createElement(Tooltip, { contentStyle: { borderRadius: "12px", border: "1px solid hsl(var(--border))", fontWeight: 600 } }),
-            React.createElement(Bar, {
-              dataKey: "clients",
-              fill: "hsl(var(--primary))",
-              radius: [6, 6, 0, 0],
-              name: "Clients",
-              isAnimationActive: true,
-              animationDuration: 500,
-              animationEasing: "ease-out",
-            }, clientGrowth.map((_, i) => React.createElement(Cell, { key: i, className: "transition-opacity duration-200 hover:opacity-90" })))
-          )
-        )
-      )
-    )
+  return (
+    <Card className={CARD_BASE}>
+      <CardHeader className="flex flex-col gap-3">
+        <div>
+          <CardTitle className="text-lg font-bold tracking-tight">Client Growth</CardTitle>
+          <p className="mt-0.5 text-sm font-medium text-muted-foreground">
+            {rangeLabel ? `Showing: ${rangeLabel} · Cumulative clients` : "Cumulative · Cumulative clients"}
+          </p>
+        </div>
+        <div>
+          <ChartsDateRangeFilter />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={clientGrowth} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted/50" />
+              <XAxis dataKey="month" className="text-xs font-medium" tick={{ fill: "hsl(var(--muted-foreground))" }} />
+              <YAxis className="text-xs font-medium" tick={{ fill: "hsl(var(--muted-foreground))" }} />
+              <Tooltip contentStyle={{ borderRadius: "12px", border: "1px solid hsl(var(--border))", fontWeight: 600 }} />
+              <Bar
+                dataKey="clients"
+                fill="hsl(var(--primary))"
+                radius={[6, 6, 0, 0]}
+                name="Clients"
+                isAnimationActive
+                animationDuration={500}
+                animationEasing="ease-out"
+              >
+                {clientGrowth.map((_, i) => (
+                  <Cell key={i} className="transition-opacity duration-200 hover:opacity-90" />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

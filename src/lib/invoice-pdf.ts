@@ -32,13 +32,13 @@ const PAGE = {
 
 const COLORS = {
   text: [30, 30, 30] as [number, number, number],
-  textMuted: [100, 100, 100],
-  primary: [88, 28, 135], // purple
-  divider: [220, 220, 220],
-  paidBg: [34, 197, 94],
-  pendingBg: [234, 88, 12],
-  tableHeaderBg: [248, 248, 250],
-  totalBg: [245, 245, 250],
+  textMuted: [100, 100, 100] as [number, number, number],
+  primary: [88, 28, 135] as [number, number, number], // purple
+  divider: [220, 220, 220] as [number, number, number],
+  paidBg: [34, 197, 94] as [number, number, number],
+  pendingBg: [234, 88, 12] as [number, number, number],
+  tableHeaderBg: [248, 248, 250] as [number, number, number],
+  totalBg: [245, 245, 250] as [number, number, number],
 };
 
 const FONT = {

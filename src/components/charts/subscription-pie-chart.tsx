@@ -39,8 +39,8 @@ export function SubscriptionPieChart({ data }: { data: Point[] }) {
             ))}
           </Pie>
           <Tooltip
-            formatter={(value: number, name: string, props: { payload: { percent: number } }) =>
-              [`${value} gyms (${props.payload.percent}%)`, name]
+            formatter={(value: number, name: string, props: { payload?: { percent?: number } }) =>
+              [`${value} gyms (${props.payload?.percent ?? 0}%)`, name]
             }
             contentStyle={{ borderRadius: "12px" }}
           />

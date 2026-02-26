@@ -9,7 +9,7 @@ import {
 } from "@/lib/dashboard-filter-store";
 
 const RANGE_PARAM = "range";
-const VALID_RANGES: DashboardRangePreset[] = ["all", "this_year", "this_month", "last_month", "custom"];
+const VALID_RANGES: DashboardRangePreset[] = ["all", "7d", "30d", "3m", "6m", "custom"];
 
 export function useDashboardFilters() {
   const router = useRouter();

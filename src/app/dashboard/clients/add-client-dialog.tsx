@@ -24,6 +24,8 @@ import { useToast } from "@/hooks/use-toast";
 
 type Props = { open: boolean; onOpenChange: (open: boolean) => void };
 
+type SubscriptionStatusOption = "ACTIVE" | "EXPIRED" | "CANCELLED";
+
 const defaultForm = {
   fullName: "",
   phone: "",
@@ -32,7 +34,7 @@ const defaultForm = {
   dateOfBirth: "",
   subscriptionStartDate: "",
   subscriptionEndDate: "",
-  subscriptionStatus: "ACTIVE" as const,
+  subscriptionStatus: "ACTIVE" as SubscriptionStatusOption,
   totalAmount: "",
   amountPaid: "0",
 };
@@ -175,7 +177,7 @@ export function AddClientDialog({ open, onOpenChange }: Props) {
             <Label>Status</Label>
             <Select
               value={form.subscriptionStatus}
-              onValueChange={(v: "ACTIVE" | "EXPIRED" | "CANCELLED") =>
+              onValueChange={(v: SubscriptionStatusOption) =>
                 setForm((f) => ({ ...f, subscriptionStatus: v }))
               }
             >

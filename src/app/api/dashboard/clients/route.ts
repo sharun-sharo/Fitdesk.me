@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { SubscriptionStatus } from "@prisma/client";
 import { getSessionOrThrow } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -15,14 +16,16 @@ export async function GET(request: Request) {
     const search = searchParams.get("search")?.trim() || "";
     const status = searchParams.get("status") || ""; // ACTIVE | EXPIRED | ""
 
-    const where: { gymId: string; fullName?: { contains: string; mode: "insensitive" }; subscriptionStatus?: string } = {
+    const where: { gymId: string; fullName?: { contains: string; mode: "insensitive" }; subscriptionStatus?: SubscriptionStatus } = {
       gymId: session.gymId,
     };
     if (search) {
       where.fullName = { contains: search, mode: "insensitive" };
     }
-    if (status === "ACTIVE" || status === "EXPIRED") {
-      where.subscriptionStatus = status;
+    if (status === "ACTIVE") {
+      where.subscriptionStatus = SubscriptionStatus.ACTIVE;
+    } else if (status === "EXPIRED") {
+      where.subscriptionStatus = SubscriptionStatus.EXPIRED;
     }
 
     const [clients, total] = await Promise.all([

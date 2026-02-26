@@ -1,9 +1,9 @@
 "use client";
 
 import { create } from "zustand";
-import { subMonths, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
+import { subMonths, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
 
-export type DashboardRangePreset = "all" | "this_year" | "this_month" | "last_month" | "custom";
+export type DashboardRangePreset = "all" | "7d" | "30d" | "3m" | "6m" | "custom";
 
 export type DashboardFilterState = {
   range: DashboardRangePreset;
@@ -16,14 +16,14 @@ function getDatesForPreset(preset: DashboardRangePreset): { from: Date; to: Date
   switch (preset) {
     case "all":
       return { from: new Date(2000, 0, 1), to: endOfDay(now) };
-    case "this_year":
-      return { from: startOfDay(startOfYear(now)), to: endOfDay(now) };
-    case "this_month":
-      return { from: startOfDay(startOfMonth(now)), to: endOfDay(now) };
-    case "last_month": {
-      const last = subMonths(now, 1);
-      return { from: startOfDay(startOfMonth(last)), to: endOfDay(endOfMonth(last)) };
-    }
+    case "7d":
+      return { from: startOfDay(subDays(now, 6)), to: endOfDay(now) };
+    case "30d":
+      return { from: startOfDay(subDays(now, 29)), to: endOfDay(now) };
+    case "3m":
+      return { from: startOfDay(subMonths(now, 3)), to: endOfDay(now) };
+    case "6m":
+      return { from: startOfDay(subMonths(now, 6)), to: endOfDay(now) };
     default:
       return { from: startOfDay(startOfMonth(now)), to: endOfDay(now) };
   }
@@ -74,14 +74,15 @@ export function getRangeLabel(
 ): string {
   const labels: Record<Exclude<DashboardRangePreset, "custom">, string> = {
     all: "All-time",
-    this_year: "This year",
-    this_month: "This month",
-    last_month: "Last month",
+    "7d": "Last 7 days",
+    "30d": "Last 30 days",
+    "3m": "Last 3 months",
+    "6m": "Last 6 months",
   };
   if (range === "custom" && from && to) {
     const f = from.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
     const t = to.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
     return `${f} – ${t}`;
   }
-  return labels[range] ?? "This month";
+  return labels[range as Exclude<DashboardRangePreset, "custom">] ?? "This month";
 }
