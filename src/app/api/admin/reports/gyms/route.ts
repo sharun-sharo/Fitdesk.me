@@ -3,6 +3,8 @@ import { getSessionOrThrow } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { exportToXLSX, exportToCSV, reportFilename } from "@/lib/export-xlsx";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   try {
     const session = await getSessionOrThrow();
