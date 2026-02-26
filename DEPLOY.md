@@ -28,6 +28,20 @@
      ```bash
      npx prisma migrate deploy
      ```
+   - **One-time fix for production (recommended):** Run this with your production `DATABASE_URL` (from Railway → Postgres → Variables):
+     ```bash
+     DATABASE_URL="postgresql://..." ./scripts/fix-prod-migrations.sh
+     ```
+   - **If you get "P3005: The database schema is not empty"**, baseline then deploy:
+     ```bash
+     DATABASE_URL="postgresql://..." ./scripts/baseline-and-deploy.sh
+     ```
+   - **If you get "P3018: A migration failed to apply"**, run:
+     ```bash
+     npx prisma migrate resolve --rolled-back "20250225000000_trainer_attendance_structured"
+     npx prisma migrate deploy
+     ```
+     (with production `DATABASE_URL` set)
    - Optional: seed admin/sample data (if you have a seed script):
      ```bash
      npm run db:seed

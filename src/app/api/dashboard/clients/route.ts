@@ -21,17 +21,27 @@ export async function GET(request: Request) {
     const now = new Date();
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    const where: {
+    type Where = {
       gymId: string;
       fullName?: { contains: string; mode: "insensitive" };
+      phone?: { contains: string };
+      email?: { contains: string; mode: "insensitive" };
       subscriptionStatus?: SubscriptionStatus;
       subscriptionEndDate?: { not: null; gte?: Date; lte?: Date } | null;
-      OR?: Array<{ subscriptionStatus?: SubscriptionStatus; subscriptionEndDate?: null }>;
-    } = {
-      gymId: session.gymId,
+      OR?: Array<Record<string, unknown>>;
+      AND?: Array<Record<string, unknown>>;
     };
+    const where: Where = { gymId: session.gymId };
+    const andConditions: Record<string, unknown>[] = [];
+
     if (search) {
-      where.fullName = { contains: search, mode: "insensitive" };
+      andConditions.push({
+        OR: [
+          { fullName: { contains: search, mode: "insensitive" as const } },
+          { phone: { contains: search } },
+          { email: { contains: search, mode: "insensitive" as const } },
+        ],
+      });
     }
     if (status === "ACTIVE") {
       where.subscriptionStatus = SubscriptionStatus.ACTIVE;
@@ -44,10 +54,15 @@ export async function GET(request: Request) {
         lte: sevenDaysFromNow,
       };
     } else if (status === "EXPIRED") {
-      where.OR = [
-        { subscriptionStatus: SubscriptionStatus.EXPIRED },
-        { subscriptionEndDate: null },
-      ];
+      andConditions.push({
+        OR: [
+          { subscriptionStatus: SubscriptionStatus.EXPIRED },
+          { subscriptionEndDate: null },
+        ],
+      });
+    }
+    if (andConditions.length > 0) {
+      where.AND = andConditions;
     }
 
     const [clients, total] = await Promise.all([
@@ -99,7 +114,18 @@ export async function GET(request: Request) {
     if (e instanceof Error && e.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    console.error(e);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    console.error("GET /api/dashboard/clients error:", e);
+    const isPrismaError =
+      e instanceof Error &&
+      (e.message.includes("column") ||
+        e.message.includes("Unknown arg") ||
+        e.message.includes("Invalid `prisma"));
+    const message =
+      process.env.NODE_ENV === "development" && e instanceof Error
+        ? e.message
+        : isPrismaError
+          ? "Database schema out of date. Run: npx prisma migrate deploy"
+          : "Server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

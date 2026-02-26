@@ -46,3 +46,18 @@ export function debounce<T extends (...args: any[]) => void>(fn: T, ms: number):
     timeout = setTimeout(() => fn(...args), ms);
   };
 }
+
+/** Debounce with cancel so a pending call can be cancelled (e.g. when search is cleared). */
+export function debounceWithCancel<T extends (...args: any[]) => void>(
+  fn: T,
+  ms: number
+): { run: (...args: Parameters<T>) => void; cancel: () => void } {
+  let timeout: ReturnType<typeof setTimeout>;
+  return {
+    run: (...args: Parameters<T>) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => fn(...args), ms);
+    },
+    cancel: () => clearTimeout(timeout),
+  };
+}

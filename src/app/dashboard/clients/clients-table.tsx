@@ -29,7 +29,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { formatCurrency, formatDate, isExpiringWithinDays, daysUntil } from "@/lib/utils";
-import { debounce } from "@/lib/utils";
+import { debounceWithCancel } from "@/lib/utils";
 import {
   Search,
   ChevronLeft,
@@ -222,7 +222,7 @@ export function ClientsTable() {
 
   const debouncedFetch = useMemo(
     () =>
-      debounce((p: number, s: string, st: string) => {
+      debounceWithCancel((p: number, s: string, st: string) => {
         fetchClients(p, s, st);
       }, DEBOUNCE_MS),
     [fetchClients]
@@ -234,13 +234,15 @@ export function ClientsTable() {
 
   useEffect(() => {
     if (search === "") {
+      debouncedFetch.cancel();
       setPage(1);
       fetchClients(1, "", statusParam);
     } else {
       setPage(1);
-      debouncedFetch(1, search, statusParam);
+      debouncedFetch.run(1, search, statusParam);
     }
-  }, [search]);
+    return () => debouncedFetch.cancel();
+  }, [search, statusParam, fetchClients, debouncedFetch]);
 
   useEffect(() => {
     const handler = () => fetchClients(page, search, statusParam);
@@ -408,11 +410,11 @@ export function ClientsTable() {
             aria-hidden
           />
           <Input
-            placeholder="Search by name..."
+            placeholder="Search by name or phone number..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 rounded-xl h-10"
-            aria-label="Search clients by name"
+            aria-label="Search clients by name or phone number"
           />
         </div>
         <Select
