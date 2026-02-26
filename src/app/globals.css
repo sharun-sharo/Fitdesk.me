@@ -1,0 +1,238 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "react-day-picker/dist/style.css";
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 262 83% 58%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 262 83% 58%;
+    --radius: 0.75rem;
+    --chart-1: 262 83% 58%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 12 76% 61%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 263 70% 50%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 263 70% 50%;
+    --chart-1: 263 70% 50%;
+    --chart-2: 173 58% 45%;
+    --chart-3: 12 76% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* Clear, readable font sizes in dashboard */
+  .dashboard-card .text-2xl,
+  .dashboard-card .text-xl {
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Smooth transitions */
+* {
+  @apply transition-colors duration-200;
+}
+
+/* Gradient mesh background with aqua tint */
+.gradient-bg {
+  background: linear-gradient(135deg, hsl(180 40% 97%) 0%, hsl(175 35% 96%) 35%, hsl(190 30% 97%) 70%, hsl(180 40% 97%) 100%);
+}
+
+.dark .gradient-bg {
+  background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(190 25% 12%) 35%, hsl(180 20% 14%) 70%, hsl(var(--background)) 100%);
+}
+
+/* Faint radial glow behind header (dashboard) */
+.gradient-bg.header-glow {
+  background: radial-gradient(
+      circle at 20% 0%,
+      rgba(124, 58, 237, 0.08),
+      transparent 40%
+    ),
+    #f7f8fc;
+}
+
+.dark .gradient-bg.header-glow {
+  background: radial-gradient(
+      circle at 20% 0%,
+      rgba(124, 58, 237, 0.12),
+      transparent 40%
+    ),
+    hsl(var(--background));
+}
+
+/* Dashboard typography scale (semantic, reusable) */
+@layer components {
+  .text-metric {
+    @apply text-2xl font-bold tracking-tight text-foreground tabular-nums;
+  }
+  .text-card-title {
+    @apply text-sm font-semibold text-foreground;
+  }
+  .text-card-subtext {
+    @apply text-xs font-medium text-muted-foreground;
+  }
+  .text-section-label {
+    @apply text-xs font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+}
+
+/* Dashboard: clear typography & hover lift */
+.dashboard-card {
+  @apply transition-all duration-300 ease-out;
+}
+.dashboard-card:hover {
+  @apply shadow-lg -translate-y-0.5 border-primary/10;
+}
+
+/* Admin dashboard: soft shadows + depth */
+.admin-card {
+  @apply transition-all duration-300 ease-out rounded-2xl border border-border/50 bg-card shadow-sm;
+}
+.admin-card:hover {
+  @apply shadow-lg -translate-y-0.5 border-primary/10;
+}
+.admin-page-bg {
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(var(--primary) / 0.06), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 0%, hsl(var(--primary) / 0.04), transparent);
+}
+
+/* Logo hover glow */
+@keyframes logo-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+.logo-brand:hover .logo-dot {
+  animation: logo-glow 1.2s ease-in-out infinite;
+}
+
+/* Landing page: fade-in-up for sections */
+@keyframes landing-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.landing-animate {
+  animation: landing-fade-in-up 0.6s ease-out forwards;
+}
+.landing-card-hover {
+  @apply transition-all duration-300 ease-out;
+}
+.landing-card-hover:hover {
+  @apply shadow-xl -translate-y-1 border-primary/20;
+}
+.landing-cta-primary {
+  @apply inline-flex items-center justify-center rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-2;
+}
+.landing-cta-secondary {
+  @apply inline-flex items-center justify-center rounded-xl border-2 border-primary/40 bg-background px-6 py-3 text-sm font-semibold text-primary transition-all duration-300 hover:bg-primary/10 hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-2;
+}
+
+/* Stagger children animation delays */
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+.stagger-5 { animation-delay: 250ms; }
+.stagger-6 { animation-delay: 300ms; }
+
+/* Chart bar hover feedback */
+.chart-bar-hover {
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+.chart-bar-hover:hover {
+  filter: brightness(1.08);
+}
+
+/* Focus ring for accessibility */
+.dashboard-focus:focus-visible {
+  @apply outline-none ring-2 ring-primary/50 ring-offset-2;
+}
+
+/* Date picker (react-day-picker) overrides */
+.rdp-date-picker {
+  --rdp-cell-size: 32px;
+  --rdp-caption-font-size: 14px;
+  --rdp-accent-color: hsl(var(--primary));
+  --rdp-background-color: hsl(var(--primary) / 0.1);
+  --rdp-selected-color: hsl(var(--primary-foreground));
+  margin: 0;
+}
+.rdp-date-picker .rdp-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+.rdp-date-picker .rdp-caption_label {
+  font-size: var(--rdp-caption-font-size);
+}
+.rdp-date-picker .rdp-nav {
+  display: flex;
+  gap: 0.25rem;
+}
+.rdp-date-picker .rdp-day {
+  font-size: 0.8125rem;
+}
+.rdp-date-picker .rdp-day_selected {
+  font-weight: 600;
+}
+.rdp-date-picker .rdp-day_today:not(.rdp-day_selected) {
+  font-weight: 600;
+  color: hsl(var(--primary));
+}
+/* Keep year/month dropdowns compact; native select options list size is browser-dependent */
+.rdp-date-picker .rdp-dropdown_year,
+.rdp-date-picker .rdp-dropdown_month {
+  min-width: 0;
+}

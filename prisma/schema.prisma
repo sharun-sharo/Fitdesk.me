@@ -1,0 +1,110 @@
+// FitDesk - Multi-tenant Gym Management SaaS
+// PostgreSQL (Railway)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+enum Role {
+  SUPER_ADMIN
+  GYM_OWNER
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  phone     String?
+  password  String
+  role      Role
+  gymId     String?
+  createdAt DateTime @default(now())
+
+  gym  Gym?   @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  gyms Gym[]  @relation("GymOwner")
+}
+
+model Gym {
+  id                    String   @id @default(cuid())
+  name                  String
+  ownerId               String
+  subscriptionPlanId   String?
+  subscriptionStartDate DateTime?
+  subscriptionEndDate   DateTime?
+  isActive              Boolean  @default(true)
+  invoiceLogoUrl        String?
+  invoiceAddress        String?
+  invoicePhone          String?
+  invoiceEmail          String?
+  gstNumber             String?
+  createdAt             DateTime @default(now())
+
+  owner            User     @relation("GymOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  subscriptionPlan SubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id], onDelete: SetNull)
+  users            User[]
+  clients          Client[]
+
+  @@index([ownerId])
+  @@index([subscriptionPlanId])
+}
+
+model SubscriptionPlan {
+  id             String   @id @default(cuid())
+  name           String
+  price          Decimal  @db.Decimal(10, 2)
+  durationInDays Int
+  features       Json     @default("[]")
+  createdAt      DateTime @default(now())
+
+  gyms Gym[]
+}
+
+model Client {
+  id                    String             @id @default(cuid())
+  gymId                 String
+  fullName              String
+  phone                 String?
+  email                 String?
+  address               String?
+  dateOfBirth           DateTime?
+  joinDate              DateTime           @default(now())
+  subscriptionStartDate DateTime?
+  subscriptionEndDate   DateTime?
+  subscriptionStatus    SubscriptionStatus @default(ACTIVE)
+  totalAmount           Decimal            @default(0) @db.Decimal(10, 2)
+  amountPaid            Decimal            @default(0) @db.Decimal(10, 2)
+  createdAt             DateTime           @default(now())
+
+  gym     Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  payments Payment[]
+
+  @@index([gymId])
+  @@index([subscriptionStatus])
+  @@index([subscriptionEndDate])
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  clientId      String
+  amount        Decimal  @db.Decimal(10, 2)
+  paymentDate   DateTime @default(now())
+  paymentMethod String?
+  createdAt     DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([paymentDate])
+}
