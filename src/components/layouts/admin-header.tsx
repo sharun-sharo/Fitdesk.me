@@ -9,16 +9,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Shield, Moon, Sun, Search } from "lucide-react";
+import { LogOut, Shield, Search } from "lucide-react";
 import { AdminSidebarTrigger } from "./admin-sidebar";
-import { useTheme } from "@/components/providers/theme-provider";
 import { useState } from "react";
 
 type Props = { name: string; email: string };
 
 export function AdminHeader({ name, email }: Props) {
   const router = useRouter();
-  const { theme, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState("");
 
   async function handleLogout() {
@@ -44,19 +42,6 @@ export function AdminHeader({ name, email }: Props) {
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleTheme}
-          className="rounded-xl h-9 w-9"
-          aria-label="Toggle theme"
-        >
-          {theme === "dark" ? (
-            <Sun className="h-4 w-4" />
-          ) : (
-            <Moon className="h-4 w-4" />
-          )}
-        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
