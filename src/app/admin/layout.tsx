@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { AdminSidebar } from "@/components/layouts/admin-sidebar";
 import { AdminHeader } from "@/components/layouts/admin-header";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminLayout({
   children,
 }: {

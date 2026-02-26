@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { DashboardSidebar } from "@/components/layouts/dashboard-sidebar";
 import { DashboardHeader } from "@/components/layouts/dashboard-header";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: {
