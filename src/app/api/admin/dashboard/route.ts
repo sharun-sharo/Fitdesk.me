@@ -6,8 +6,9 @@ import { startOfMonth, endOfMonth, subMonths } from "date-fns";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    void request.url;
     const session = await getSessionOrThrow();
     if (session.role !== "SUPER_ADMIN") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
