@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { GymOwnersList } from "@/components/admin/gym-owners-list";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminGymOwnersPage() {
   const plans = await prisma.subscriptionPlan.findMany({
     orderBy: { name: "asc" },

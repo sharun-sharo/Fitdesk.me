@@ -1,5 +1,7 @@
 import { ReportsAdminSection } from "./reports-admin-section";
 
+export const dynamic = "force-dynamic";
+
 export default function AdminReportsPage() {
   return (
     <div className="space-y-8 animate-fade-in">
