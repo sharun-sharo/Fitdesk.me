@@ -1,6 +1,8 @@
 import { getSession } from "@/lib/auth";
 import { ReportsSection } from "./reports-section";
 
+export const dynamic = "force-dynamic";
+
 export default async function ReportsPage() {
   const session = await getSession();
   if (!session?.gymId) return null;

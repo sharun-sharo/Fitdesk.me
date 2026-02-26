@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { InsightsCards } from "./insights-cards";
 
+export const dynamic = "force-dynamic";
+
 export default async function InsightsPage() {
   const session = await getSession();
   if (!session?.gymId) return null;

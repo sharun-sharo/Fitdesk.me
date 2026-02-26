@@ -6,6 +6,8 @@ import { ClientStatsSection } from "./client-stats-section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LayoutDashboard } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default function ClientsPage() {
   return (
     <div className="space-y-8 animate-fade-in pb-8">

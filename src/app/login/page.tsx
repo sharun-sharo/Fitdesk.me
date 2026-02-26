@@ -5,6 +5,8 @@ import Link from "next/link";
 import { LoginForm } from "./login-form";
 import { LoginLandingSections } from "./login-landing-sections";
 
+export const dynamic = "force-dynamic";
+
 export default async function LoginPage() {
   const session = await getSession();
   if (session) {
