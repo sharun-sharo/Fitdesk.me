@@ -27,17 +27,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Plus, CreditCard, MoreHorizontal, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, CreditCard, MoreHorizontal, Search, ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddGymOwnerForm } from "./add-gym-owner-form";
 import { AssignPlanForm } from "./assign-plan-form";
+import { EditGymOwnerForm } from "./edit-gym-owner-form";
 
 type GymRow = {
   id: string;
   name: string;
   ownerName: string;
   ownerEmail: string;
+  ownerPhone: string | null;
   ownerId: string;
   planName: string;
   planId: string | null;
@@ -64,6 +66,7 @@ export function GymOwnersList({ plans }: { plans: PlanOption[] }) {
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState<GymRow | null>(null);
+  const [editOpen, setEditOpen] = useState<GymRow | null>(null);
   const limit = 10;
   const router = useRouter();
   const { toast } = useToast();
@@ -137,6 +140,12 @@ export function GymOwnersList({ plans }: { plans: PlanOption[] }) {
     router.refresh();
   }
 
+  function onEdited() {
+    setEditOpen(null);
+    fetchGyms(page, search, statusFilter, planFilter);
+    router.refresh();
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -206,6 +215,12 @@ export function GymOwnersList({ plans }: { plans: PlanOption[] }) {
           onSuccess={onAssigned}
         />
       )}
+      <EditGymOwnerForm
+        gym={editOpen}
+        open={!!editOpen}
+        onOpenChange={(v) => !v && setEditOpen(null)}
+        onSuccess={onEdited}
+      />
 
       <Card className="rounded-xl border-border/50 shadow-sm overflow-hidden">
         <CardContent className="p-0">
@@ -245,6 +260,9 @@ export function GymOwnersList({ plans }: { plans: PlanOption[] }) {
                       <td className="p-4">
                         <div>{g.ownerName}</div>
                         <div className="text-sm text-muted-foreground">{g.ownerEmail}</div>
+                        {g.ownerPhone && (
+                          <div className="text-sm text-muted-foreground">{g.ownerPhone}</div>
+                        )}
                       </td>
                       <td className="p-4">
                         {g.planName}
@@ -273,6 +291,13 @@ export function GymOwnersList({ plans }: { plans: PlanOption[] }) {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="rounded-xl w-48">
+                            <DropdownMenuItem
+                              className="rounded-lg"
+                              onClick={() => setEditOpen(g)}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               className="rounded-lg"
                               onClick={() => setAssignOpen(g)}

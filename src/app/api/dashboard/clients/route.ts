@@ -16,9 +16,18 @@ export async function GET(request: Request) {
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const limit = Math.min(50, Math.max(1, parseInt(searchParams.get("limit") || "10", 10)));
     const search = searchParams.get("search")?.trim() || "";
-    const status = searchParams.get("status") || ""; // ACTIVE | EXPIRED | ""
+    const status = searchParams.get("status") || ""; // ACTIVE | EXPIRED | EXPIRING_SOON | ""
 
-    const where: { gymId: string; fullName?: { contains: string; mode: "insensitive" }; subscriptionStatus?: SubscriptionStatus } = {
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const where: {
+      gymId: string;
+      fullName?: { contains: string; mode: "insensitive" };
+      subscriptionStatus?: SubscriptionStatus;
+      subscriptionEndDate?: { not: null; gte?: Date; lte?: Date } | null;
+      OR?: Array<{ subscriptionStatus?: SubscriptionStatus; subscriptionEndDate?: null }>;
+    } = {
       gymId: session.gymId,
     };
     if (search) {
@@ -26,8 +35,19 @@ export async function GET(request: Request) {
     }
     if (status === "ACTIVE") {
       where.subscriptionStatus = SubscriptionStatus.ACTIVE;
+      where.subscriptionEndDate = { not: null };
+    } else if (status === "EXPIRING_SOON") {
+      where.subscriptionStatus = SubscriptionStatus.ACTIVE;
+      where.subscriptionEndDate = {
+        not: null,
+        gte: now,
+        lte: sevenDaysFromNow,
+      };
     } else if (status === "EXPIRED") {
-      where.subscriptionStatus = SubscriptionStatus.EXPIRED;
+      where.OR = [
+        { subscriptionStatus: SubscriptionStatus.EXPIRED },
+        { subscriptionEndDate: null },
+      ];
     }
 
     const [clients, total] = await Promise.all([
@@ -37,7 +57,7 @@ export async function GET(request: Request) {
         skip: (page - 1) * limit,
         take: limit,
         include: {
-          payments: { select: { amount: true } },
+          payments: { select: { amount: true, paymentDate: true }, orderBy: { paymentDate: "desc" } },
         },
       }),
       prisma.client.count({ where }),
@@ -50,6 +70,8 @@ export async function GET(request: Request) {
       );
       const totalAmount = Number(c.totalAmount);
       const pendingAmount = Math.max(0, totalAmount - amountPaidFromPayments);
+      const noExpiry = c.subscriptionEndDate == null;
+      const lastPayment = c.payments[0];
       return {
         id: c.id,
         fullName: c.fullName,
@@ -58,10 +80,11 @@ export async function GET(request: Request) {
         joinDate: c.joinDate.toISOString(),
         subscriptionStartDate: c.subscriptionStartDate?.toISOString() ?? null,
         subscriptionEndDate: c.subscriptionEndDate?.toISOString() ?? null,
-        subscriptionStatus: c.subscriptionStatus,
+        subscriptionStatus: noExpiry ? "EXPIRED" : c.subscriptionStatus,
         totalAmount,
         amountPaid: amountPaidFromPayments,
         pendingAmount,
+        lastPaymentDate: lastPayment?.paymentDate?.toISOString() ?? null,
       };
     });
 

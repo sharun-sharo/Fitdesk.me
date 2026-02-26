@@ -55,16 +55,26 @@ export async function GET(request: Request) {
       revenueThisMonthAgg,
       revenueLastMonthAgg,
       revenueThisYearAgg,
-      pendingPaymentsAgg,
+      outstandingData,
       last6MonthsRevenue,
       last6MonthsClientGrowth,
     ] = await Promise.all([
       prisma.client.count({ where: { gymId } }),
       prisma.client.count({
-        where: { gymId, subscriptionStatus: "ACTIVE" },
+        where: {
+          gymId,
+          subscriptionStatus: "ACTIVE",
+          subscriptionEndDate: { not: null },
+        },
       }),
       prisma.client.count({
-        where: { gymId, subscriptionStatus: "EXPIRED" },
+        where: {
+          gymId,
+          OR: [
+            { subscriptionStatus: "EXPIRED" },
+            { subscriptionEndDate: null },
+          ],
+        },
       }),
       prisma.client.count({
         where: {
@@ -99,13 +109,38 @@ export async function GET(request: Request) {
         },
         _sum: { amount: true },
       }),
-      prisma.client.aggregate({
-        where: { gymId },
-        _sum: {
-          totalAmount: true,
-          amountPaid: true,
-        },
-      }),
+      (async () => {
+        // Use same logic as clients list: outstanding = totalAmount - sum(payments) per client
+        const [clientAgg, paymentsSum, paymentSumsByClient, clients] = await Promise.all([
+          prisma.client.aggregate({
+            where: { gymId },
+            _sum: { totalAmount: true },
+          }),
+          prisma.payment.aggregate({
+            where: { client: { gymId } },
+            _sum: { amount: true },
+          }),
+          prisma.payment.groupBy({
+            by: ["clientId"],
+            where: { client: { gymId } },
+            _sum: { amount: true },
+          }),
+          prisma.client.findMany({
+            where: { gymId },
+            select: { id: true, totalAmount: true },
+          }),
+        ]);
+        const totalAmountSum = Number(clientAgg._sum.totalAmount ?? 0);
+        const paymentsTotal = Number(paymentsSum._sum.amount ?? 0);
+        const outstandingTotal = Math.max(0, totalAmountSum - paymentsTotal);
+        const paidByClient = new Map(
+          paymentSumsByClient.map((p) => [p.clientId, Number(p._sum.amount ?? 0)])
+        );
+        const membersWithOutstandingCount = clients.filter(
+          (c) => (Number(c.totalAmount ?? 0) - (paidByClient.get(c.id) ?? 0)) > 0
+        ).length;
+        return { outstandingTotal, membersWithOutstandingCount };
+      })(),
       (async () => {
         const months = Array.from({ length: 6 }, (_, i) => subMonths(now, 5 - i));
         return Promise.all(
@@ -146,9 +181,8 @@ export async function GET(request: Request) {
     const revenueThisMonth = Number(revenueThisMonthAgg._sum.amount ?? 0);
     const revenueLastMonth = Number(revenueLastMonthAgg._sum.amount ?? 0);
     const revenueThisYear = Number(revenueThisYearAgg._sum.amount ?? 0);
-    const totalAmount = Number(pendingPaymentsAgg._sum.totalAmount ?? 0);
-    const amountPaid = Number(pendingPaymentsAgg._sum.amountPaid ?? 0);
-    const pendingPayments = Math.max(0, totalAmount - amountPaid);
+    const pendingPayments = outstandingData.outstandingTotal;
+    const membersWithOutstanding = outstandingData.membersWithOutstandingCount;
 
     const revenueGrowthPercent =
       revenueLastMonth > 0
@@ -302,25 +336,38 @@ export async function GET(request: Request) {
 
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const expiringSoon = await prisma.client.findMany({
-      where: {
-        gymId,
-        subscriptionStatus: "ACTIVE",
-        subscriptionEndDate: {
-          gte: startOfToday,
-          lte: sevenDaysFromNow,
+    const [expiringSoon, expiringSoonCount] = await Promise.all([
+      prisma.client.findMany({
+        where: {
+          gymId,
+          subscriptionStatus: "ACTIVE",
+          subscriptionEndDate: {
+            gte: startOfToday,
+            lte: sevenDaysFromNow,
+          },
         },
-      },
-      orderBy: { subscriptionEndDate: "asc" },
-      take: 20,
-      select: { id: true, fullName: true, subscriptionEndDate: true },
-    });
+        orderBy: { subscriptionEndDate: "asc" },
+        take: 20,
+        select: { id: true, fullName: true, subscriptionEndDate: true },
+      }),
+      prisma.client.count({
+        where: {
+          gymId,
+          subscriptionStatus: "ACTIVE",
+          subscriptionEndDate: {
+            gte: startOfToday,
+            lte: sevenDaysFromNow,
+          },
+        },
+      }),
+    ]);
 
     return NextResponse.json({
       kpis: {
         totalClients,
         activeClients,
         expiredClients,
+        expiringSoonCount,
         revenueThisMonth,
         revenueThisYear,
         pendingPayments,
@@ -329,6 +376,7 @@ export async function GET(request: Request) {
         clientsLastMonth,
         revenueGrowthPercent,
         clientGrowthPercent,
+        membersWithOutstanding,
       },
       monthlyRevenue: chartRevenue,
       clientGrowth: chartGrowth,

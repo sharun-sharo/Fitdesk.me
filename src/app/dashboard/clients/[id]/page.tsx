@@ -16,23 +16,41 @@ export default async function ClientDetailPage({
 
   const client = await prisma.client.findFirst({
     where: { id, gymId: session.gymId },
-    include: { payments: { orderBy: { paymentDate: "desc" } } },
+    include: {
+      payments: { orderBy: { paymentDate: "desc" } },
+      history: { orderBy: { createdAt: "desc" }, take: 50 },
+    },
   });
 
   if (!client) notFound();
 
+  const amountPaidFromPayments = client.payments.reduce(
+    (sum, p) => sum + Number(p.amount),
+    0
+  );
+  const totalAmount = Number(client.totalAmount);
+  const storedAmountPaid = Number(client.amountPaid);
+
+  const noExpiry = client.subscriptionEndDate == null;
   const serialized = {
     ...client,
-    totalAmount: Number(client.totalAmount),
-    amountPaid: Number(client.amountPaid),
+    totalAmount,
+    amountPaid: amountPaidFromPayments,
+    storedAmountPaid,
     joinDate: client.joinDate.toISOString(),
     dateOfBirth: client.dateOfBirth?.toISOString() ?? null,
     subscriptionStartDate: client.subscriptionStartDate?.toISOString() ?? null,
     subscriptionEndDate: client.subscriptionEndDate?.toISOString() ?? null,
+    subscriptionStatus: noExpiry ? "EXPIRED" : client.subscriptionStatus,
     payments: client.payments.map((p) => ({
       ...p,
       amount: Number(p.amount),
       paymentDate: p.paymentDate.toISOString(),
+    })),
+    history: client.history.map((h) => ({
+      id: h.id,
+      message: h.message,
+      createdAt: h.createdAt.toISOString(),
     })),
   };
 

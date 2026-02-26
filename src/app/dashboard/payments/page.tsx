@@ -417,12 +417,12 @@ export default function PaymentsPage() {
                 className="rounded-xl gap-2 shadow-md hover:shadow-lg transition-shadow bg-primary hover:bg-primary/90"
               >
                 <Plus className="h-5 w-5" />
-                Record payment
+                Add payment
               </Button>
             </DialogTrigger>
             <DialogContent className="rounded-2xl sm:max-w-md">
               <DialogHeader>
-                <DialogTitle>Record payment</DialogTitle>
+                <DialogTitle>Add payment</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleRecordPayment} className="space-y-4">
                 <div>
@@ -506,7 +506,7 @@ export default function PaymentsPage() {
                   />
                 </div>
                 <div>
-                  <Label>Date</Label>
+                  <Label>Paid Date</Label>
                   <DatePickerField
                     value={formDate || undefined}
                     onChange={(d) => setFormDate(d ? format(d, "yyyy-MM-dd") : "")}
@@ -769,7 +769,7 @@ export default function PaymentsPage() {
                 onClick={() => setRecordOpen(true)}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Record payment
+                Add payment
               </Button>
             </div>
           ) : filteredPayments.length === 0 ? (

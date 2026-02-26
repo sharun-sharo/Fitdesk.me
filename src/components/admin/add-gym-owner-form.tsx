@@ -38,6 +38,7 @@ export function AddGymOwnerForm({
   const [form, setForm] = useState({
     name: "",
     email: "",
+    phone: "",
     password: "",
     gymName: "",
     subscriptionPlanId: "__none__",
@@ -63,6 +64,7 @@ export function AddGymOwnerForm({
         body: JSON.stringify({
           name: form.name.trim(),
           email: form.email.trim(),
+          phone: form.phone.trim() || undefined,
           password: form.password,
           gymName: form.gymName.trim(),
           subscriptionPlanId: form.subscriptionPlanId !== "__none__" ? form.subscriptionPlanId : null,
@@ -75,7 +77,7 @@ export function AddGymOwnerForm({
         return;
       }
       toast({ title: "Gym owner added", variant: "success" });
-      setForm({ name: "", email: "", password: "", gymName: "", subscriptionPlanId: "__none__", durationDays: "30" });
+      setForm({ name: "", email: "", phone: "", password: "", gymName: "", subscriptionPlanId: "__none__", durationDays: "30" });
       onSuccess();
     } catch {
       toast({ title: "Something went wrong", variant: "destructive" });
@@ -115,6 +117,17 @@ export function AddGymOwnerForm({
                 required
               />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="owner-phone">Phone (optional)</Label>
+            <Input
+              id="owner-phone"
+              type="tel"
+              value={form.phone}
+              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+              placeholder="+91 98765 43210"
+              className="rounded-xl"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="owner-password">Password</Label>

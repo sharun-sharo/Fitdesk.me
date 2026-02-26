@@ -10,7 +10,9 @@ export const dynamic = "force-dynamic";
 export default async function LoginPage() {
   const session = await getSession();
   if (session) {
-    redirect(session.role === "SUPER_ADMIN" ? "/admin" : "/dashboard");
+    if (session.role === "SUPER_ADMIN") redirect("/admin");
+    if (session.role === "GYM_OWNER" && session.gymId) redirect("/dashboard");
+    // GYM_OWNER without gymId would redirect to dashboard then back here (loop) — show login instead
   }
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-background">

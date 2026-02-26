@@ -12,7 +12,7 @@ const actions = [
     description: "Register a new member",
   },
   {
-    label: "Add Payment",
+    label: "Add payment",
     href: "/dashboard/payments",
     icon: CreditCard,
     description: "Log a payment",

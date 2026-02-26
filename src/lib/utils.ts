@@ -32,6 +32,13 @@ export function isExpiringWithinDays(endDate: Date | string, days: number): bool
   return daysDiff >= 0 && daysDiff <= days;
 }
 
+/** Days from now to endDate (positive = future, negative = past). */
+export function daysUntil(endDate: Date | string): number {
+  const end = typeof endDate === "string" ? new Date(endDate) : endDate;
+  const now = new Date();
+  return Math.round((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 export function debounce<T extends (...args: any[]) => void>(fn: T, ms: number): (...args: Parameters<T>) => void {
   let timeout: ReturnType<typeof setTimeout>;
   return (...args: Parameters<T>) => {

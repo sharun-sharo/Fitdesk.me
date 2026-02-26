@@ -14,6 +14,8 @@ import {
   Settings,
   FileText,
   Menu,
+  CalendarRange,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -22,6 +24,8 @@ import { useState, useEffect } from "react";
 const mainNav = [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }];
 const managementNav = [
   { href: "/dashboard/clients", label: "Clients", icon: Users },
+  { href: "/dashboard/trainers", label: "Trainers", icon: UserCircle },
+  { href: "/dashboard/subscriptions", label: "Subscriptions", icon: CalendarRange },
   { href: "/dashboard/payments", label: "Payments", icon: CreditCard },
   { href: "/dashboard/invoices", label: "Invoice", icon: FileText },
   { href: "/dashboard/insights", label: "AI Insights", icon: Sparkles },

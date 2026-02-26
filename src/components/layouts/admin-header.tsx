@@ -9,15 +9,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Shield, Search } from "lucide-react";
+import { LogOut, Shield, Search, User } from "lucide-react";
 import { AdminSidebarTrigger } from "./admin-sidebar";
 import { useState } from "react";
+import { AdminProfileDialog } from "@/components/admin/admin-profile-dialog";
 
 type Props = { name: string; email: string };
 
 export function AdminHeader({ name, email }: Props) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
+  const [profileOpen, setProfileOpen] = useState(false);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -61,6 +63,13 @@ export function AdminHeader({ name, email }: Props) {
               <p className="text-xs font-medium text-muted-foreground truncate">{email}</p>
             </div>
             <DropdownMenuItem
+              onClick={() => setProfileOpen(true)}
+              className="rounded-xl cursor-pointer"
+            >
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem
               onClick={handleLogout}
               className="rounded-xl cursor-pointer focus:bg-destructive/10 focus:text-destructive"
             >
@@ -70,6 +79,13 @@ export function AdminHeader({ name, email }: Props) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      <AdminProfileDialog
+        open={profileOpen}
+        onOpenChange={setProfileOpen}
+        initialName={name}
+        initialEmail={email}
+        onSuccess={() => router.refresh()}
+      />
     </header>
   );
 }

@@ -7,7 +7,10 @@ type Stats = {
   totalClients: number;
   activeClients: number;
   expiredClients: number;
+  expiringSoonCount: number;
   pendingPayments: number;
+  clientsThisMonth?: number;
+  membersWithOutstanding?: number;
 } | null;
 
 export function ClientStatsSection() {
@@ -27,7 +30,10 @@ export function ClientStatsSection() {
             totalClients: k.totalClients ?? 0,
             activeClients: k.activeClients ?? 0,
             expiredClients: k.expiredClients ?? 0,
+            expiringSoonCount: k.expiringSoonCount ?? 0,
             pendingPayments: k.pendingPayments ?? 0,
+            clientsThisMonth: k.clientsThisMonth ?? 0,
+            membersWithOutstanding: k.membersWithOutstanding ?? 0,
           });
         }
       } catch {

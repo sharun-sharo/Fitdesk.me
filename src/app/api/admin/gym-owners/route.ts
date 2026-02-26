@@ -30,6 +30,7 @@ export async function GET(request: Request) {
         { name: { contains: search, mode: "insensitive" } },
         { owner: { name: { contains: search, mode: "insensitive" } } },
         { owner: { email: { contains: search, mode: "insensitive" } } },
+        { owner: { phone: { contains: search, mode: "insensitive" } } },
       ];
     }
     if (status === "active") where.isActive = true;
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
       prisma.gym.findMany({
         where: cleanWhere,
         include: {
-          owner: { select: { id: true, name: true, email: true } },
+          owner: { select: { id: true, name: true, email: true, phone: true } },
           subscriptionPlan: true,
         },
         orderBy: { createdAt: "desc" },
@@ -58,6 +59,7 @@ export async function GET(request: Request) {
       name: g.name,
       ownerName: g.owner.name,
       ownerEmail: g.owner.email,
+      ownerPhone: g.owner.phone ?? null,
       ownerId: g.owner.id,
       planName: g.subscriptionPlan?.name ?? "—",
       planId: g.subscriptionPlanId ?? null,
@@ -92,6 +94,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const name = body.name?.trim();
     const email = body.email?.trim()?.toLowerCase();
+    const phone = body.phone?.trim() || null;
     const password = body.password;
     const gymName = body.gymName?.trim();
     const subscriptionPlanId = body.subscriptionPlanId?.trim() || null;
@@ -134,6 +137,7 @@ export async function POST(request: Request) {
       data: {
         name,
         email,
+        phone: phone || undefined,
         password: hashedPassword,
         role: "GYM_OWNER",
       },

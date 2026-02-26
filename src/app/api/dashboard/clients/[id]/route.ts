@@ -82,8 +82,11 @@ export async function PATCH(
       data.subscriptionEndDate = body.subscriptionEndDate
         ? new Date(body.subscriptionEndDate)
         : null;
-    if (body.subscriptionStatus !== undefined)
-      data.subscriptionStatus = body.subscriptionStatus;
+    const validStatuses = ["ACTIVE", "EXPIRED", "CANCELLED"] as const;
+    if (body.subscriptionStatus !== undefined) {
+      const s = String(body.subscriptionStatus).toUpperCase();
+      if (validStatuses.includes(s)) data.subscriptionStatus = s;
+    }
     if (typeof body.totalAmount === "number")
       data.totalAmount = new Decimal(body.totalAmount);
 
@@ -91,6 +94,40 @@ export async function PATCH(
       where: { id },
       data,
     });
+
+    const changes: string[] = [];
+    if (data.fullName !== undefined && data.fullName !== client.fullName)
+      changes.push(`Name: ${String(data.fullName)}`);
+    if (data.phone !== undefined && data.phone !== client.phone)
+      changes.push(`Phone: ${data.phone ?? "—"}`);
+    if (data.email !== undefined && data.email !== client.email)
+      changes.push(`Email: ${data.email ?? "—"}`);
+    if (data.address !== undefined && data.address !== client.address)
+      changes.push(`Address: ${data.address ?? "—"}`);
+    if (data.subscriptionStartDate !== undefined) {
+      const prev = client.subscriptionStartDate?.toISOString().slice(0, 10) ?? "—";
+      const next = updated.subscriptionStartDate?.toISOString().slice(0, 10) ?? "—";
+      if (prev !== next) changes.push(`Subscription start: ${next}`);
+    }
+    if (data.subscriptionEndDate !== undefined) {
+      const prev = client.subscriptionEndDate?.toISOString().slice(0, 10) ?? "—";
+      const next = updated.subscriptionEndDate?.toISOString().slice(0, 10) ?? "—";
+      if (prev !== next) changes.push(`Expires: ${next}`);
+    }
+    if (data.subscriptionStatus !== undefined && data.subscriptionStatus !== client.subscriptionStatus)
+      changes.push(`Status: ${String(data.subscriptionStatus)}`);
+    if (data.totalAmount !== undefined && Number(data.totalAmount) !== Number(client.totalAmount))
+      changes.push(`Total amount: ₹${Number(updated.totalAmount)}`);
+
+    if (changes.length > 0) {
+      await prisma.clientHistory.create({
+        data: {
+          clientId: id,
+          message: changes.join(" · "),
+          details: { changes },
+        },
+      });
+    }
 
     return NextResponse.json({
       ...updated,

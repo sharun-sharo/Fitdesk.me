@@ -53,7 +53,15 @@ export async function middleware(request: NextRequest) {
         if (role === "SUPER_ADMIN") {
           return NextResponse.redirect(new URL("/admin", request.url));
         }
-        return NextResponse.redirect(new URL("/login", request.url));
+        const res = NextResponse.redirect(new URL("/login", request.url));
+        res.cookies.delete("fitdesk_token");
+        return res;
+      }
+      // Require gymId for dashboard access to avoid redirect loop (dashboard redirects to login if no gymId)
+      if (!gymId || gymId === "") {
+        const res = NextResponse.redirect(new URL("/login", request.url));
+        res.cookies.delete("fitdesk_token");
+        return res;
       }
       return NextResponse.next();
     }

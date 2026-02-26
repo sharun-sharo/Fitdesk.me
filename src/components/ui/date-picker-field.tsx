@@ -159,6 +159,9 @@ export interface DatePickerFieldProps {
   clearable?: boolean;
   /** DOB only: past dates (1900–today), compact scrollable month/year dropdowns */
   dateOfBirthMode?: boolean;
+  /** Controlled open state (e.g. to open end date after start date is chosen) */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 function parseDateValue(v: Date | string | null | undefined): Date | undefined {
@@ -179,6 +182,8 @@ export function DatePickerField({
   toDate: toDateProp,
   clearable = false,
   dateOfBirthMode = false,
+  open: controlledOpen,
+  onOpenChange,
 }: DatePickerFieldProps) {
   const effectiveFrom = dateOfBirthMode ? DOB_MIN_DATE : fromDate;
   const effectiveTo = dateOfBirthMode ? getDOBMaxDate() : toDateProp;
@@ -201,7 +206,16 @@ export function DatePickerField({
     }
   }, [dateOfBirthMode, date, rawDate, onChange]);
 
-  const [open, setOpen] = React.useState(false);
+  const [internalOpen, setInternalOpen] = React.useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = React.useCallback(
+    (next: boolean) => {
+      if (!isControlled) setInternalOpen(next);
+      onOpenChange?.(next);
+    },
+    [isControlled, onOpenChange]
+  );
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   const displayStr = date ? format(date, DISPLAY_FORMAT) : "";
@@ -216,7 +230,7 @@ export function DatePickerField({
       onChange?.(d);
       if (d !== undefined) setOpen(false);
     },
-    [dateOfBirthMode, onChange]
+    [dateOfBirthMode, onChange, setOpen]
   );
 
   const handleOpen = React.useCallback(() => {

@@ -92,7 +92,7 @@ export function DashboardHeader({ gymName, userName, userEmail }: Props) {
         <Button asChild size="sm" className="rounded-lg gap-1.5 font-semibold h-9">
           <Link href="/dashboard/payments">
             <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Record payment</span>
+            <span className="hidden sm:inline">Add payment</span>
           </Link>
         </Button>
         <DropdownMenu open={activityOpen} onOpenChange={setActivityOpen}>

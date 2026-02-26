@@ -5,8 +5,9 @@ import {
   useState,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { formatCurrency, formatDate, isExpiringWithinDays } from "@/lib/utils";
+import { formatCurrency, formatDate, isExpiringWithinDays, daysUntil } from "@/lib/utils";
 import { debounce } from "@/lib/utils";
 import {
   Search,
@@ -41,6 +42,7 @@ import {
   Pencil,
   CreditCard,
   Download,
+  Upload,
   ChevronUp,
   ChevronDown,
   X,
@@ -59,6 +61,7 @@ export type ClientRow = {
   totalAmount: number;
   amountPaid: number;
   pendingAmount: number;
+  lastPaymentDate: string | null;
 };
 
 // ----- Reusable components -----
@@ -74,74 +77,96 @@ export function StatusBadge({
     subscriptionEndDate &&
     status === "ACTIVE" &&
     isExpiringWithinDays(subscriptionEndDate, 7);
+  const days = subscriptionEndDate ? daysUntil(subscriptionEndDate) : null;
 
-  if (expiringSoon) {
+  if (expiringSoon && subscriptionEndDate && days !== null) {
+    const isToday = days === 0;
+    const isOneDay = days === 1;
+    const isUrgent = days <= 3;
+    const subtextClass = isToday || isOneDay
+      ? "text-red-600 dark:text-red-400"
+      : isUrgent
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-muted-foreground";
+    const label = isToday
+      ? "Expires today"
+      : isOneDay
+        ? "Expires in 1 day"
+        : `Expires in ${days} days`;
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/50 bg-amber-500/15 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" aria-hidden />
-        Expiring soon
-      </span>
+      <div className="flex flex-col gap-1 text-left">
+        <span className="inline-flex w-fit items-center gap-1.5 rounded-md border border-amber-300/50 bg-amber-500/10 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">
+          Expiring soon
+        </span>
+        <span className={cn("text-xs", subtextClass)}>{label}</span>
+      </div>
     );
   }
   if (status === "ACTIVE") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/40 bg-emerald-500/15 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
-        ACTIVE
-      </span>
+      <div className="flex flex-col gap-1 text-left">
+        <span className="inline-flex w-fit items-center gap-1.5 rounded-md border border-emerald-300/40 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+          Active
+        </span>
+      </div>
     );
   }
   if (status === "EXPIRED") {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-300/40 bg-rose-500/15 px-2.5 py-1 text-xs font-medium uppercase tracking-wide text-rose-700 dark:text-rose-300">
-        <span className="h-1.5 w-1.5 rounded-full bg-rose-500" aria-hidden />
-        EXPIRED
-      </span>
+      <div className="flex flex-col gap-1 text-left">
+        <span className="inline-flex w-fit items-center gap-1.5 rounded-md border border-rose-300/40 bg-rose-500/10 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-rose-700 dark:text-rose-300">
+          Expired
+        </span>
+      </div>
     );
   }
   return (
-    <Badge variant="secondary" className="font-medium uppercase tracking-wide">
+    <Badge variant="secondary" className="w-fit font-medium uppercase tracking-wide text-xs">
       {status}
     </Badge>
   );
 }
 
-export function PaymentProgress({
-  amountPaid,
-  totalAmount,
-  pendingAmount,
-}: {
-  amountPaid: number;
-  totalAmount: number;
-  pendingAmount: number;
-}) {
-  const pct = totalAmount > 0 ? Math.min(100, (amountPaid / totalAmount) * 100) : 0;
-  const hasPending = pendingAmount > 0;
-
+function LastPaidCell({ amountPaid, lastPaymentDate }: { amountPaid: number; lastPaymentDate: string | null }) {
   return (
-    <div className="min-w-[100px]">
-      <div className="text-sm font-medium tabular-nums">
-        {formatCurrency(amountPaid)} / {formatCurrency(totalAmount)}
-      </div>
-      <div
-        className="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden"
-        role="progressbar"
-        aria-valuenow={pct}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      >
-        <div
-          className={cn(
-            "h-full rounded-full transition-all",
-            hasPending ? "bg-amber-500" : "bg-primary"
+    <div className="text-left [&_p]:m-0 [&_p:not(:first-child)]:mt-0.5">
+      {amountPaid > 0 ? (
+        <>
+          <p className="font-semibold text-base tabular-nums">{formatCurrency(amountPaid)}</p>
+          {lastPaymentDate && (
+            <p className="text-xs text-muted-foreground">on {formatDate(lastPaymentDate)}</p>
           )}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-      {hasPending && (
-        <p className="text-xs text-amber-600 mt-0.5">
-          Pending: {formatCurrency(pendingAmount)}
-        </p>
+        </>
+      ) : (
+        <>
+          <p className="font-medium text-base tabular-nums text-muted-foreground">—</p>
+          <p className="text-xs text-muted-foreground">No payments yet</p>
+        </>
+      )}
+    </div>
+  );
+}
+
+function OutstandingCell({
+  pendingAmount,
+  subscriptionEndDate,
+}: {
+  pendingAmount: number;
+  subscriptionEndDate: string | null;
+}) {
+  if (pendingAmount <= 0) {
+    return (
+      <p className="text-left text-sm font-medium text-emerald-600 dark:text-emerald-400 m-0">No dues</p>
+    );
+  }
+  return (
+    <div className="text-left [&_p]:m-0 [&_p:not(:first-child)]:mt-0.5">
+      <p className="font-semibold tabular-nums text-red-600 dark:text-red-400 text-base">
+        {formatCurrency(pendingAmount)}
+      </p>
+      <p className="text-xs text-red-600/80 dark:text-red-400/80">Due</p>
+      {subscriptionEndDate && (
+        <p className="text-xs text-muted-foreground">Since {formatDate(subscriptionEndDate)}</p>
       )}
     </div>
   );
@@ -151,6 +176,7 @@ const limit = 10;
 const DEBOUNCE_MS = 300;
 
 export function ClientsTable() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [items, setItems] = useState<ClientRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -342,9 +368,9 @@ export function ClientsTable() {
       "Email",
       "Status",
       "Expiry",
-      "Paid",
-      "Total",
-      "Pending",
+      "Last Paid",
+      "Last Payment Date",
+      "Outstanding",
     ];
     const rows = filteredItems.map((c) =>
       [
@@ -354,7 +380,7 @@ export function ClientsTable() {
         c.subscriptionStatus,
         c.subscriptionEndDate ?? "",
         c.amountPaid,
-        c.totalAmount,
+        c.lastPaymentDate ?? "",
         c.pendingAmount,
       ].join(",")
     );
@@ -402,6 +428,7 @@ export function ClientsTable() {
           <SelectContent>
             <SelectItem value="__all__">All status</SelectItem>
             <SelectItem value="ACTIVE">Active</SelectItem>
+            <SelectItem value="EXPIRING_SOON">Expiring Soon</SelectItem>
             <SelectItem value="EXPIRED">Expired</SelectItem>
           </SelectContent>
         </Select>
@@ -528,53 +555,34 @@ export function ClientsTable() {
               {/* Mobile card layout */}
               <div className="md:hidden divide-y divide-border/50">
                 {filteredItems.map((c) => {
-                  const expiringSoon =
-                    c.subscriptionEndDate &&
-                    c.subscriptionStatus === "ACTIVE" &&
-                    isExpiringWithinDays(c.subscriptionEndDate, 7);
                   const isExpired = c.subscriptionStatus === "EXPIRED";
+                  const borderColor = isExpired
+                    ? "border-l-rose-500"
+                    : c.subscriptionStatus === "ACTIVE"
+                      ? "border-l-emerald-500"
+                      : "border-l-amber-500";
                   return (
                     <div
                       key={c.id}
-                      className={cn(
-                        "p-4 space-y-2 transition-colors",
-                        isExpired && "bg-rose-500/5",
-                        expiringSoon && !isExpired && "bg-amber-500/5"
-                      )}
+                      className={cn("p-4 space-y-3 border-l-4 transition-colors hover:bg-muted/20", borderColor)}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 space-y-2">
+                        <div className="min-w-0 flex flex-col gap-0.5">
                           <Link
                             href={`/dashboard/clients/${c.id}`}
-                            className="font-medium hover:underline block truncate"
+                            className="font-medium text-primary hover:text-primary/90 hover:underline underline-offset-2 transition-colors truncate inline-block"
                           >
                             {c.fullName}
                           </Link>
-                          <div className="flex flex-col gap-2">
-                            <StatusBadge
-                              status={c.subscriptionStatus}
-                              subscriptionEndDate={c.subscriptionEndDate}
-                            />
-                            {c.subscriptionStatus === "EXPIRED" && (
-                              <Button
-                                variant={c.phone?.trim() ? "default" : "outline"}
-                                size="sm"
-                                className="w-fit rounded-full gap-1.5 h-8 text-xs font-medium shadow-sm transition-all hover:shadow"
-                                onClick={() => handleSendReminder(c)}
-                                disabled={
-                                  !c.phone?.trim() || sendingReminderId === c.id
-                                }
-                                title={
-                                  !c.phone?.trim()
-                                    ? "Add phone number to send reminder"
-                                    : undefined
-                                }
-                              >
-                                <MessageCircle className="h-3.5 w-3.5" />
-                                {sendingReminderId === c.id ? "Sending…" : "Send reminder"}
-                              </Button>
-                            )}
-                          </div>
+                          {c.phone && (
+                            <button
+                              type="button"
+                              onClick={() => copyPhone(c.phone!)}
+                              className="text-xs text-muted-foreground hover:text-foreground underline decoration-dotted text-left"
+                            >
+                              {c.phone}
+                            </button>
+                          )}
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -590,7 +598,7 @@ export function ClientsTable() {
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
                               <Link href={`/dashboard/payments?record=${c.id}`} className="flex items-center gap-2">
-                                <CreditCard className="h-4 w-4" /> Record payment
+                                <CreditCard className="h-4 w-4" /> Add payment
                               </Link>
                             </DropdownMenuItem>
                             {c.subscriptionStatus === "EXPIRED" && (
@@ -613,19 +621,28 @@ export function ClientsTable() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                      <div className="flex items-center justify-between text-sm text-muted-foreground">
-                        <span>
-                          Due: {c.subscriptionEndDate ? formatDate(c.subscriptionEndDate) : "—"}
-                        </span>
-                        <span className="font-medium text-foreground tabular-nums">
-                          {formatCurrency(c.amountPaid)} / {formatCurrency(c.totalAmount)}
-                        </span>
+                      <StatusBadge
+                        status={c.subscriptionStatus}
+                        subscriptionEndDate={c.subscriptionEndDate}
+                      />
+                      <div className="flex justify-between text-sm gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Last paid</p>
+                          {c.amountPaid > 0 ? (
+                            <p className="font-semibold tabular-nums">{formatCurrency(c.amountPaid)}</p>
+                          ) : (
+                            <p className="text-muted-foreground">No payments yet</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground">Outstanding</p>
+                          {c.pendingAmount > 0 ? (
+                            <p className="font-semibold tabular-nums text-rose-600">{formatCurrency(c.pendingAmount)} due</p>
+                          ) : (
+                            <p className="text-emerald-600">No dues</p>
+                          )}
+                        </div>
                       </div>
-                      {c.pendingAmount > 0 && (
-                        <p className="text-xs text-amber-600">
-                          Pending: {formatCurrency(c.pendingAmount)}
-                        </p>
-                      )}
                     </div>
                   );
                 })}
@@ -635,8 +652,8 @@ export function ClientsTable() {
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm" role="table" aria-label="Clients">
                   <thead>
-                    <tr className="border-b border-border/50 bg-muted/30">
-                      <th className="w-10 p-4">
+                    <tr className="border-b border-border/30 bg-muted/20">
+                      <th className="w-10 p-4 py-5">
                         <input
                           type="checkbox"
                           checked={
@@ -649,7 +666,7 @@ export function ClientsTable() {
                         />
                       </th>
                       <th
-                        className="text-left p-4 font-medium cursor-pointer hover:bg-muted/50 transition-colors select-none"
+                        className="text-left p-4 py-5 font-medium cursor-pointer hover:bg-muted/50 transition-colors select-none"
                         onClick={() => toggleSort("name")}
                       >
                         <span className="inline-flex items-center gap-1">
@@ -662,12 +679,9 @@ export function ClientsTable() {
                             ))}
                         </span>
                       </th>
-                      <th className="text-left p-4 font-medium hidden md:table-cell">
-                        Contact
-                      </th>
-                      <th className="text-left p-4 font-medium">Status</th>
+                      <th className="text-left p-4 py-5 font-medium w-[200px]">Status</th>
                       <th
-                        className="text-left p-4 font-medium cursor-pointer hover:bg-muted/50 transition-colors select-none"
+                        className="text-left p-4 py-5 font-medium cursor-pointer hover:bg-muted/50 transition-colors select-none"
                         onClick={() => toggleSort("expiry")}
                       >
                         <span className="inline-flex items-center gap-1">
@@ -680,47 +694,60 @@ export function ClientsTable() {
                             ))}
                         </span>
                       </th>
-                      <th
-                        className="text-right p-4 font-medium cursor-pointer hover:bg-muted/50 transition-colors select-none"
-                        onClick={() => toggleSort("amount")}
-                      >
-                        <span className="inline-flex items-center gap-1">
-                          Paid / Total
-                          {sortKey === "amount" &&
-                            (sortDir === "asc" ? (
-                              <ChevronUp className="h-4 w-4" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4" />
-                            ))}
-                        </span>
-                      </th>
-                      <th className="text-right p-4 font-medium w-12">Actions</th>
+                      <th className="text-left p-4 py-5 font-medium">Last Paid</th>
+                      <th className="text-left p-4 py-5 font-medium">Outstanding</th>
+                      <th className="text-left p-4 py-5 font-medium w-[1%]">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredItems.map((c, i) => {
+                    {filteredItems.map((c) => {
                       const expiringSoon =
                         c.subscriptionEndDate &&
                         c.subscriptionStatus === "ACTIVE" &&
                         isExpiringWithinDays(c.subscriptionEndDate, 7);
                       const isExpired = c.subscriptionStatus === "EXPIRED";
-                      const rowBg = isExpired
-                        ? "bg-rose-500/5"
+                      const borderColor = isExpired
+                        ? "border-l-rose-500"
                         : expiringSoon
-                          ? "bg-amber-500/5"
-                          : i % 2 === 1
-                            ? "bg-muted/20"
-                            : "";
+                          ? "border-l-amber-500"
+                          : c.subscriptionStatus === "ACTIVE"
+                            ? "border-l-emerald-500"
+                            : "border-l-border";
+
+                      const primaryHref =
+                        isExpired
+                          ? `/dashboard/clients/${c.id}`
+                          : c.subscriptionStatus === "ACTIVE" && !expiringSoon
+                            ? `/dashboard/clients/${c.id}`
+                            : `/dashboard/payments?record=${c.id}`;
+                      const primaryLabel =
+                        isExpired
+                          ? "Renew"
+                          : c.subscriptionStatus === "ACTIVE" && !expiringSoon
+                            ? "Add Subscription"
+                            : "Add payment";
 
                       return (
                         <tr
                           key={c.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            if ((e.target as HTMLElement).closest("button, a, input, [role='menuitem']")) return;
+                            router.push(`/dashboard/clients/${c.id}`);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !(e.target as HTMLElement).closest("button, a, input")) {
+                              e.preventDefault();
+                              router.push(`/dashboard/clients/${c.id}`);
+                            }
+                          }}
                           className={cn(
-                            "border-b border-border/50 last:border-0 transition-colors hover:bg-muted/30",
-                            rowBg
+                            "border-b border-border/30 last:border-0 transition-colors duration-150 hover:bg-muted/25 border-l-4 cursor-pointer",
+                            borderColor
                           )}
                         >
-                          <td className="p-4">
+                          <td className="p-4 py-5 align-middle" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
                               checked={selectedIds.has(c.id)}
@@ -729,147 +756,112 @@ export function ClientsTable() {
                               className="rounded border-input"
                             />
                           </td>
-                          <td className="p-4 py-5">
-                            <Link
-                              href={`/dashboard/clients/${c.id}`}
-                              className="font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-primary/20 rounded"
-                            >
-                              {c.fullName}
-                            </Link>
-                          </td>
-                          <td className="p-4 py-5 hidden md:table-cell text-muted-foreground">
-                            {c.phone ? (
-                              <button
-                                type="button"
-                                onClick={() => copyPhone(c.phone!)}
-                                title="Click to copy"
-                                className="hover:text-foreground underline decoration-dotted focus:outline-none focus:ring-2 focus:ring-primary/20 rounded"
+                          <td className="p-4 py-5 align-middle">
+                            <div className="flex flex-col gap-0.5">
+                              <Link
+                                href={`/dashboard/clients/${c.id}`}
+                                className="font-medium text-primary hover:text-primary/90 hover:underline underline-offset-2 transition-colors w-fit"
+                                onClick={(e) => e.stopPropagation()}
                               >
-                                {c.phone}
-                              </button>
-                            ) : (
-                              c.email ?? "—"
-                            )}
-                          </td>
-                          <td className="p-4 py-5 align-top">
-                            <div
-                              className={cn(
-                                "flex flex-col gap-2 min-w-[120px]",
-                                isExpired && "pl-3 border-l-2 border-rose-400/50"
-                              )}
-                            >
-                              <StatusBadge
-                                status={c.subscriptionStatus}
-                                subscriptionEndDate={c.subscriptionEndDate}
-                              />
-                              {c.subscriptionStatus === "EXPIRED" && (
-                                <Button
-                                  variant={c.phone?.trim() ? "default" : "outline"}
-                                  size="sm"
-                                  className="w-fit rounded-full gap-1.5 h-8 text-xs font-medium shadow-sm transition-all hover:shadow"
-                                  onClick={() => handleSendReminder(c)}
-                                  disabled={
-                                    !c.phone?.trim() || sendingReminderId === c.id
-                                  }
-                                  title={
-                                    !c.phone?.trim()
-                                      ? "Add phone number to send reminder"
-                                      : undefined
-                                  }
+                                {c.fullName}
+                              </Link>
+                              {c.phone ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyPhone(c.phone!);
+                                  }}
+                                  title="Click to copy"
+                                  className="text-xs text-muted-foreground hover:text-foreground underline decoration-dotted text-left"
                                 >
-                                  <MessageCircle className="h-3.5 w-3.5" />
-                                  {sendingReminderId === c.id ? "Sending…" : "Send reminder"}
-                                </Button>
+                                  {c.phone}
+                                </button>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">{c.email ?? "—"}</span>
                               )}
                             </div>
                           </td>
-                          <td className="p-4 py-5 text-muted-foreground tabular-nums">
+                          <td className="p-4 py-5 align-middle text-left">
+                            <StatusBadge
+                              status={c.subscriptionStatus}
+                              subscriptionEndDate={c.subscriptionEndDate}
+                            />
+                          </td>
+                          <td className="p-4 py-5 text-muted-foreground tabular-nums align-middle text-left">
                             {c.subscriptionEndDate
                               ? formatDate(c.subscriptionEndDate)
                               : "—"}
                           </td>
-                          <td className="p-4 py-5 text-right">
-                            <PaymentProgress
-                              amountPaid={c.amountPaid}
-                              totalAmount={c.totalAmount}
+                          <td className="p-4 py-5 align-middle w-[120px] text-left">
+                            <LastPaidCell amountPaid={c.amountPaid} lastPaymentDate={c.lastPaymentDate} />
+                          </td>
+                          <td className="p-4 py-5 align-middle w-[100px] text-left">
+                            <OutstandingCell
                               pendingAmount={c.pendingAmount}
+                              subscriptionEndDate={c.subscriptionEndDate}
                             />
                           </td>
-                          <td className="p-4 py-5 text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 rounded-lg"
-                                  aria-label={`Actions for ${c.fullName}`}
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
+                          <td className="p-4 py-5 align-middle" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex justify-end">
+                              <div className="flex flex-col items-start gap-2">
+                                <div className="flex items-center gap-2">
+                                <Button variant="default" size="sm" className="rounded-lg h-8 text-xs shrink-0 min-w-[7.5rem] justify-center" asChild>
+                                  <Link href={primaryHref}>{primaryLabel}</Link>
                                 </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent
-                                align="end"
-                                className="rounded-xl w-56"
-                              >
-                                <DropdownMenuItem asChild className="rounded-lg">
-                                  <Link
-                                    href={`/dashboard/clients/${c.id}`}
-                                    className="flex items-center gap-2"
-                                  >
-                                    <FileText className="h-4 w-4" />
-                                    View profile
-                                  </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild className="rounded-lg">
-                                  <Link
-                                    href={`/dashboard/clients/${c.id}`}
-                                    className="flex items-center gap-2"
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                    Edit
-                                  </Link>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild className="rounded-lg">
-                                  <Link
-                                    href={`/dashboard/payments?record=${c.id}`}
-                                    className="flex items-center gap-2"
-                                  >
-                                    <CreditCard className="h-4 w-4" />
-                                    Record payment
-                                  </Link>
-                                </DropdownMenuItem>
-                                {c.subscriptionStatus === "EXPIRED" && (
-                                  <DropdownMenuItem
-                                    className="rounded-lg"
-                                    onClick={() => handleSendReminder(c)}
-                                    disabled={
-                                      !c.phone?.trim() ||
-                                      sendingReminderId === c.id
-                                    }
-                                    title={
-                                      !c.phone?.trim()
-                                        ? "Add phone number to send reminder"
-                                        : undefined
-                                    }
-                                  >
-                                    <MessageCircle className="h-4 w-4 mr-2" />
-                                    {sendingReminderId === c.id
-                                      ? "Sending…"
-                                      : "Send reminder"}
+                                <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg shrink-0" aria-label="More actions">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="rounded-xl w-48">
+                                  <DropdownMenuItem asChild className="rounded-lg">
+                                    <Link href={`/dashboard/clients/${c.id}`} className="flex items-center gap-2">
+                                      <FileText className="h-4 w-4" /> View profile
+                                    </Link>
                                   </DropdownMenuItem>
-                                )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="rounded-lg text-destructive focus:text-destructive focus:bg-destructive/10"
-                                  onClick={() =>
-                                    handleDelete(c.id, c.fullName)
-                                  }
+                                  <DropdownMenuItem asChild className="rounded-lg">
+                                    <Link href={`/dashboard/clients/${c.id}`} className="flex items-center gap-2">
+                                      <Pencil className="h-4 w-4" /> Edit
+                                    </Link>
+                                  </DropdownMenuItem>
+                                  {(expiringSoon || isExpired) && (
+                                    <DropdownMenuItem
+                                      className="rounded-lg"
+                                      onClick={() => handleSendReminder(c)}
+                                      disabled={!c.phone?.trim() || sendingReminderId === c.id}
+                                      title={!c.phone?.trim() ? "Add phone to send reminder" : undefined}
+                                    >
+                                      <MessageCircle className="h-4 w-4 mr-2" />
+                                      {sendingReminderId === c.id ? "Sending…" : "Send reminder"}
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="rounded-lg text-destructive focus:text-destructive focus:bg-destructive/10"
+                                    onClick={() => handleDelete(c.id, c.fullName)}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                              </div>
+                              {isExpired && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-lg h-8 text-xs shrink-0 min-w-[7.5rem] justify-center gap-1.5 w-full sm:w-auto"
+                                  onClick={() => handleSendReminder(c)}
+                                  disabled={!c.phone?.trim() || sendingReminderId === c.id}
+                                  title={!c.phone?.trim() ? "Add phone to send message" : undefined}
                                 >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                                  <MessageCircle className="h-3.5 w-3.5" />
+                                  {sendingReminderId === c.id ? "Sending…" : "Send message"}
+                                </Button>
+                              )}
+                              </div>
+                            </div>
                           </td>
                         </tr>
                       );

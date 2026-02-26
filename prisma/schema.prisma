@@ -55,6 +55,7 @@ model Gym {
   subscriptionPlan SubscriptionPlan? @relation(fields: [subscriptionPlanId], references: [id], onDelete: SetNull)
   users            User[]
   clients          Client[]
+  trainers         Trainer[]
 
   @@index([ownerId])
   @@index([subscriptionPlanId])
@@ -87,12 +88,26 @@ model Client {
   amountPaid            Decimal            @default(0) @db.Decimal(10, 2)
   createdAt             DateTime           @default(now())
 
-  gym     Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  gym      Gym             @relation(fields: [gymId], references: [id], onDelete: Cascade)
   payments Payment[]
+  history  ClientHistory[]
 
   @@index([gymId])
   @@index([subscriptionStatus])
   @@index([subscriptionEndDate])
+}
+
+model ClientHistory {
+  id        String   @id @default(cuid())
+  clientId  String
+  message   String
+  details   Json?
+  createdAt DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([createdAt])
 }
 
 model Payment {
@@ -107,4 +122,60 @@ model Payment {
 
   @@index([clientId])
   @@index([paymentDate])
+}
+
+enum TrainerShift {
+  MORNING
+  EVENING
+  CUSTOM
+}
+
+enum TrainerSalaryType {
+  FIXED
+  PER_SESSION
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+model Trainer {
+  id             String           @id @default(cuid())
+  gymId          String
+  fullName       String
+  phone          String?
+  email          String?
+  specialization String?          // Strength, Yoga, CrossFit, etc.
+  shift          TrainerShift    @default(MORNING)
+  shiftCustom    String?          // e.g. "10 AM - 2 PM" when shift = CUSTOM
+  weeklyOff      Json?            // ["MON","TUE"] or [1,2] - stored as JSON array
+  salaryType     TrainerSalaryType @default(FIXED)
+  joiningDate    DateTime?
+  profilePhoto   String?          // URL or path
+  createdAt      DateTime        @default(now())
+
+  gym         Gym                  @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  attendance  TrainerAttendance[]
+
+  @@index([gymId])
+  @@index([shift])
+  @@index([specialization])
+}
+
+model TrainerAttendance {
+  id          String           @id @default(cuid())
+  trainerId   String
+  date        DateTime
+  status      AttendanceStatus @default(PRESENT)
+  checkInTime DateTime?
+  checkOutTime DateTime?
+  createdAt   DateTime         @default(now())
+
+  trainer Trainer @relation(fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@unique([trainerId, date])
+  @@index([trainerId])
+  @@index([date])
 }
