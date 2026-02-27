@@ -1,5 +1,3 @@
-import twilio from "twilio";
-
 /**
  * Normalize phone to E.164.
  * Assumes Indian numbers if no country code.
@@ -36,16 +34,31 @@ export async function sendSms({ to, body }: SendSmsOptions): Promise<{ sid: stri
     throw new Error("Twilio SMS is not configured (missing TWILIO_SMS_FROM)");
   }
 
-  const client = twilio(accountSid, authToken);
   const toE164Number = to.startsWith("+") ? to : toE164(to);
+  const params = new URLSearchParams();
+  params.set("To", toE164Number);
+  params.set("From", from.trim());
+  params.set("Body", body);
 
-  const message = await client.messages.create({
-    from: from.trim(),
-    to: toE164Number,
-    body,
+  const url = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+  const auth = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${auth}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: params.toString(),
   });
 
-  return { sid: message.sid };
+  const data = (await res.json().catch(() => ({}))) as { sid?: string; message?: string; error_message?: string };
+  if (!res.ok) {
+    const msg = data.message || data.error_message || res.statusText || "Twilio SMS request failed";
+    throw new Error(msg);
+  }
+
+  return { sid: data.sid ?? "" };
 }
 
 export type SendWhatsAppOptions = {
@@ -66,6 +79,7 @@ export async function sendWhatsApp({ to, body }: SendWhatsAppOptions): Promise<{
     throw new Error("Twilio is not configured (missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN)");
   }
 
+  const twilio = (await import("twilio")).default;
   const client = twilio(accountSid, authToken);
   const toWhatsApp = to.startsWith("whatsapp:") ? to : `whatsapp:${toE164(to)}`;
 
