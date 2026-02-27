@@ -36,6 +36,7 @@ export async function GET(request: Request) {
     const granularity = searchParams.get("granularity") || "monthly";
 
     const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     let rangeStart = subMonths(now, 5);
     let rangeEnd = now;
     if (fromParam) rangeStart = new Date(fromParam);
@@ -64,15 +65,20 @@ export async function GET(request: Request) {
         where: {
           gymId,
           subscriptionStatus: "ACTIVE",
-          subscriptionEndDate: { not: null },
+          OR: [
+            { subscriptionEndDate: null },
+            { subscriptionEndDate: { gte: startOfToday } },
+          ],
         },
       }),
       prisma.client.count({
         where: {
           gymId,
+          NOT: { subscriptionStatus: "CANCELLED" },
           OR: [
             { subscriptionStatus: "EXPIRED" },
             { subscriptionEndDate: null },
+            { subscriptionEndDate: { lt: startOfToday } },
           ],
         },
       }),
@@ -334,7 +340,6 @@ export async function GET(request: Request) {
     activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     const recentActivity = activities.slice(0, 10);
 
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
     const [expiringSoon, expiringSoonCount] = await Promise.all([
       prisma.client.findMany({

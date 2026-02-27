@@ -31,9 +31,19 @@ export async function POST(
       client.subscriptionStatus,
       client.subscriptionEndDate?.toISOString() ?? null
     );
-    if (effectiveStatus !== "EXPIRED") {
+
+    let daysUntil: number | null = null;
+    if (client.subscriptionEndDate) {
+      const now = new Date();
+      daysUntil = Math.ceil(
+        (client.subscriptionEndDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
+    }
+    const expiringSoon = daysUntil !== null && daysUntil >= 0 && daysUntil <= 7;
+
+    if (effectiveStatus !== "EXPIRED" && !expiringSoon) {
       return NextResponse.json(
-        { error: "Send reminder is only for expired subscriptions" },
+        { error: "Send reminder is only for expired or expiring-soon subscriptions" },
         { status: 400 }
       );
     }
@@ -46,7 +56,7 @@ export async function POST(
       );
     }
 
-    const message = `Hi ${client.fullName}, your gym membership at our facility has expired. We'd love to have you back! Please visit us or contact us to renew your subscription.`;
+    const message = `Hi ${client.fullName}, your gym membership at our facility is due for renewal. Please visit us or contact us to renew your subscription.`;
 
     await sendSms({
       to: phone,

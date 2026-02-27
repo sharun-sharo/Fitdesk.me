@@ -28,7 +28,7 @@ const managementNav = [
   { href: "/dashboard/subscriptions", label: "Subscriptions", icon: CalendarRange },
   { href: "/dashboard/payments", label: "Payments", icon: CreditCard },
   { href: "/dashboard/invoices", label: "Invoice", icon: FileText },
-  { href: "/dashboard/insights", label: "AI Insights", icon: Sparkles },
+  { href: "/dashboard/insights", label: "AI Intelligence", icon: Sparkles },
   { href: "/dashboard/reports", label: "Reports", icon: FileBarChart },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];

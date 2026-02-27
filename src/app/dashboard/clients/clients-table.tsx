@@ -28,7 +28,13 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { formatCurrency, formatDate, isExpiringWithinDays, daysUntil } from "@/lib/utils";
+import {
+  formatCurrency,
+  formatDate,
+  isExpiringWithinDays,
+  daysUntil,
+  getEffectiveSubscriptionStatus,
+} from "@/lib/utils";
 import { debounceWithCancel } from "@/lib/utils";
 import {
   Search,
@@ -307,8 +313,27 @@ export function ClientsTable() {
     else setSelectedIds(new Set(filteredItems.map((c) => c.id)));
   };
 
+  function canSendReminder(client: ClientRow): boolean {
+    const effectiveStatus = getEffectiveSubscriptionStatus(
+      client.subscriptionStatus,
+      client.subscriptionEndDate
+    );
+    const expiringSoon =
+      !!client.subscriptionEndDate &&
+      effectiveStatus === "ACTIVE" &&
+      isExpiringWithinDays(client.subscriptionEndDate, 7);
+    return effectiveStatus === "EXPIRED" || expiringSoon;
+  }
+
   async function handleSendReminder(client: ClientRow) {
-    if (client.subscriptionStatus !== "EXPIRED") return;
+    if (!canSendReminder(client)) {
+      toast({
+        title: "Cannot send reminder",
+        description: "Reminders are only for expired or expiring-soon clients.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!client.phone?.trim()) {
       toast({
         title: "No phone number",
@@ -398,7 +423,7 @@ export function ClientsTable() {
   }
 
   const selectedClients = filteredItems.filter((c) => selectedIds.has(c.id));
-  const expiredCount = selectedClients.filter((c) => c.subscriptionStatus === "EXPIRED").length;
+  const expiredCount = selectedClients.filter((c) => canSendReminder(c)).length;
 
   return (
     <div className="space-y-4">
@@ -497,8 +522,9 @@ export function ClientsTable() {
               className="rounded-lg gap-1.5"
               onClick={() => {
                 selectedClients.forEach((c) => {
-                  if (c.subscriptionStatus === "EXPIRED" && c.phone?.trim())
+                  if (canSendReminder(c) && c.phone?.trim()) {
                     handleSendReminder(c);
+                  }
                 });
                 setSelectedIds(new Set());
               }}
