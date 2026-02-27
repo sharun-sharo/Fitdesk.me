@@ -18,10 +18,10 @@ const actions = [
     description: "Log a payment",
   },
   {
-    label: "Add Invoice",
-    href: "/dashboard/invoices",
+    label: "Add subscription",
+    href: "/dashboard/subscriptions",
     icon: FileText,
-    description: "Download invoice/bill",
+    description: "Create or renew subscription",
   },
   {
     label: "Send Payment Reminder",
