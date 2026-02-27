@@ -750,7 +750,7 @@ export function ClientsTable() {
 
                       const primaryHref =
                         isExpired
-                          ? `/dashboard/clients/${c.id}`
+                          ? `/dashboard/payments?record=${c.id}`
                           : c.subscriptionStatus === "ACTIVE" && !expiringSoon
                             ? `/dashboard/clients/${c.id}`
                             : `/dashboard/payments?record=${c.id}`;
