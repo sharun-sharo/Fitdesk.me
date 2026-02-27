@@ -68,12 +68,13 @@ export async function POST(
     if (e instanceof Error && e.message === "Unauthorized") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (e instanceof Error && e.message.includes("Twilio")) {
-      return NextResponse.json({ error: e.message }, { status: 503 });
-    }
     console.error("Send reminder error:", e);
+    const message =
+      e instanceof Error && e.message
+        ? e.message
+        : "Failed to send SMS reminder. Check Twilio configuration.";
     return NextResponse.json(
-      { error: "Failed to send SMS reminder. Check Twilio configuration." },
+      { error: message },
       { status: 500 }
     );
   }
