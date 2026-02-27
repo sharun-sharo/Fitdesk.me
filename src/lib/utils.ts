@@ -39,6 +39,22 @@ export function daysUntil(endDate: Date | string): number {
   return Math.round((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+/**
+ * Effective subscription status for display and logic.
+ * If subscriptionEndDate is in the past, returns "EXPIRED" regardless of stored status.
+ */
+export function getEffectiveSubscriptionStatus(
+  subscriptionStatus: string,
+  subscriptionEndDate: string | null
+): string {
+  if (!subscriptionEndDate) return subscriptionStatus;
+  const end = new Date(subscriptionEndDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  return end < today ? "EXPIRED" : subscriptionStatus;
+}
+
 export function debounce<T extends (...args: any[]) => void>(fn: T, ms: number): (...args: Parameters<T>) => void {
   let timeout: ReturnType<typeof setTimeout>;
   return (...args: Parameters<T>) => {

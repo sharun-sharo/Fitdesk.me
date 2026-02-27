@@ -1,7 +1,7 @@
 import twilio from "twilio";
 
 /**
- * Normalize phone to E.164 for WhatsApp.
+ * Normalize phone to E.164.
  * Assumes Indian numbers if no country code.
  */
 export function toE164(phone: string): string {
@@ -13,6 +13,39 @@ export function toE164(phone: string): string {
     return `+${digits}`;
   }
   return phone.startsWith("+") ? phone : `+${digits}`;
+}
+
+export type SendSmsOptions = {
+  to: string;
+  body: string;
+};
+
+/**
+ * Send an SMS via Twilio.
+ * Requires: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_SMS_FROM (e.g. +16615181820)
+ */
+export async function sendSms({ to, body }: SendSmsOptions): Promise<{ sid: string }> {
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const from = process.env.TWILIO_SMS_FROM;
+
+  if (!accountSid || !authToken) {
+    throw new Error("Twilio is not configured (missing TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN)");
+  }
+  if (!from) {
+    throw new Error("Twilio SMS is not configured (missing TWILIO_SMS_FROM)");
+  }
+
+  const client = twilio(accountSid, authToken);
+  const toE164Number = to.startsWith("+") ? to : toE164(to);
+
+  const message = await client.messages.create({
+    from: from.trim(),
+    to: toE164Number,
+    body,
+  });
+
+  return { sid: message.sid };
 }
 
 export type SendWhatsAppOptions = {

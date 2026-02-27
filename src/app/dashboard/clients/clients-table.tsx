@@ -312,7 +312,7 @@ export function ClientsTable() {
     if (!client.phone?.trim()) {
       toast({
         title: "No phone number",
-        description: "Add a phone number to send WhatsApp reminder.",
+        description: "Add a phone number to send SMS reminder.",
         variant: "destructive",
       });
       return;
@@ -333,7 +333,7 @@ export function ClientsTable() {
       }
       toast({
         title: "Reminder sent",
-        description: "WhatsApp message sent to " + client.fullName,
+        description: "SMS reminder sent to " + client.fullName,
       });
     } catch {
       toast({ title: "Failed to send reminder", variant: "destructive" });
@@ -558,11 +558,17 @@ export function ClientsTable() {
               <div className="md:hidden divide-y divide-border/50">
                 {filteredItems.map((c) => {
                   const isExpired = c.subscriptionStatus === "EXPIRED";
+                  const expiringSoon =
+                    c.subscriptionEndDate &&
+                    c.subscriptionStatus === "ACTIVE" &&
+                    isExpiringWithinDays(c.subscriptionEndDate, 7);
                   const borderColor = isExpired
                     ? "border-l-rose-500"
-                    : c.subscriptionStatus === "ACTIVE"
-                      ? "border-l-emerald-500"
-                      : "border-l-amber-500";
+                    : expiringSoon
+                      ? "border-l-amber-500"
+                      : c.subscriptionStatus === "ACTIVE"
+                        ? "border-l-emerald-500"
+                        : "border-l-amber-500";
                   return (
                     <div
                       key={c.id}
@@ -603,7 +609,7 @@ export function ClientsTable() {
                                 <CreditCard className="h-4 w-4" /> Add payment
                               </Link>
                             </DropdownMenuItem>
-                            {c.subscriptionStatus === "EXPIRED" && (
+                            {c.subscriptionStatus === "EXPIRED" || expiringSoon ? (
                               <DropdownMenuItem
                                 onClick={() => handleSendReminder(c)}
                                 disabled={!c.phone?.trim() || sendingReminderId === c.id}
@@ -612,7 +618,7 @@ export function ClientsTable() {
                                 <MessageCircle className="h-4 w-4 mr-2" />
                                 {sendingReminderId === c.id ? "Sending…" : "Send reminder"}
                               </DropdownMenuItem>
-                            )}
+                            ) : null}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-destructive focus:text-destructive"
@@ -849,11 +855,12 @@ export function ClientsTable() {
                                 </DropdownMenuContent>
                               </DropdownMenu>
                               </div>
-                              {isExpired && (
+                              {/* Send message: show for expired or expiring soon */}
+                              {(isExpired || expiringSoon) && (
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="rounded-lg h-8 text-xs shrink-0 min-w-[7.5rem] justify-center gap-1.5 w-full sm:w-auto"
+                                  className="rounded-lg h-8 text-xs shrink-0 min-w-[7.5rem] justify-center gap-1.5 w-full sm:w-auto border-primary/50 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
                                   onClick={() => handleSendReminder(c)}
                                   disabled={!c.phone?.trim() || sendingReminderId === c.id}
                                   title={!c.phone?.trim() ? "Add phone to send message" : undefined}

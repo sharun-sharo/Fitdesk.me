@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getEffectiveSubscriptionStatus } from "@/lib/utils";
 import { ClientProfile } from "./client-profile";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,6 @@ export default async function ClientDetailPage({
   const totalAmount = Number(client.totalAmount);
   const storedAmountPaid = Number(client.amountPaid);
 
-  const noExpiry = client.subscriptionEndDate == null;
   const serialized = {
     ...client,
     totalAmount,
@@ -41,7 +41,10 @@ export default async function ClientDetailPage({
     dateOfBirth: client.dateOfBirth?.toISOString() ?? null,
     subscriptionStartDate: client.subscriptionStartDate?.toISOString() ?? null,
     subscriptionEndDate: client.subscriptionEndDate?.toISOString() ?? null,
-    subscriptionStatus: noExpiry ? "EXPIRED" : client.subscriptionStatus,
+    subscriptionStatus: getEffectiveSubscriptionStatus(
+      client.subscriptionStatus,
+      client.subscriptionEndDate?.toISOString() ?? null
+    ),
     payments: client.payments.map((p) => ({
       ...p,
       amount: Number(p.amount),

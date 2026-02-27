@@ -11,15 +11,28 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getSession();
+  let session;
+  try {
+    session = await getSession();
+  } catch (e) {
+    console.error("Dashboard layout: getSession failed", e);
+    redirect("/login");
+  }
+
   if (!session || session.role !== "GYM_OWNER") {
     redirect("/login");
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.sub },
-    select: { name: true, email: true, gymId: true },
-  });
+  let user;
+  try {
+    user = await prisma.user.findUnique({
+      where: { id: session.sub },
+      select: { name: true, email: true, gymId: true },
+    });
+  } catch (e) {
+    console.error("Dashboard layout: prisma.user.findUnique failed", e);
+    throw e;
+  }
 
   if (!user) {
     redirect("/login");
@@ -27,11 +40,16 @@ export default async function DashboardLayout({
 
   let gymName = "My Gym";
   if (user.gymId) {
-    const gym = await prisma.gym.findUnique({
-      where: { id: user.gymId },
-      select: { name: true },
-    });
-    if (gym) gymName = gym.name;
+    try {
+      const gym = await prisma.gym.findUnique({
+        where: { id: user.gymId },
+        select: { name: true },
+      });
+      if (gym) gymName = gym.name;
+    } catch (e) {
+      console.error("Dashboard layout: prisma.gym.findUnique failed", e);
+      throw e;
+    }
   }
 
   return (

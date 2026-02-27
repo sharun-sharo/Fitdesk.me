@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { SubscriptionStatus } from "@prisma/client";
 import { getSessionOrThrow } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getEffectiveSubscriptionStatus } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,8 @@ export async function GET(request: Request) {
 
     const now = new Date();
     const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const startOfToday = new Date(now);
+    startOfToday.setHours(0, 0, 0, 0);
 
     type Where = {
       gymId: string;
@@ -27,7 +30,7 @@ export async function GET(request: Request) {
       phone?: { contains: string };
       email?: { contains: string; mode: "insensitive" };
       subscriptionStatus?: SubscriptionStatus;
-      subscriptionEndDate?: { not: null; gte?: Date; lte?: Date } | null;
+      subscriptionEndDate?: { not: null; gte?: Date; lte?: Date; lt?: Date } | null;
       OR?: Array<Record<string, unknown>>;
       AND?: Array<Record<string, unknown>>;
     };
@@ -45,7 +48,12 @@ export async function GET(request: Request) {
     }
     if (status === "ACTIVE") {
       where.subscriptionStatus = SubscriptionStatus.ACTIVE;
-      where.subscriptionEndDate = { not: null };
+      andConditions.push({
+        OR: [
+          { subscriptionEndDate: null },
+          { subscriptionEndDate: { gte: startOfToday } },
+        ],
+      });
     } else if (status === "EXPIRING_SOON") {
       where.subscriptionStatus = SubscriptionStatus.ACTIVE;
       where.subscriptionEndDate = {
@@ -58,6 +66,7 @@ export async function GET(request: Request) {
         OR: [
           { subscriptionStatus: SubscriptionStatus.EXPIRED },
           { subscriptionEndDate: null },
+          { subscriptionEndDate: { lt: startOfToday } },
         ],
       });
     }
@@ -85,7 +94,6 @@ export async function GET(request: Request) {
       );
       const totalAmount = Number(c.totalAmount);
       const pendingAmount = Math.max(0, totalAmount - amountPaidFromPayments);
-      const noExpiry = c.subscriptionEndDate == null;
       const lastPayment = c.payments[0];
       return {
         id: c.id,
@@ -95,7 +103,10 @@ export async function GET(request: Request) {
         joinDate: c.joinDate.toISOString(),
         subscriptionStartDate: c.subscriptionStartDate?.toISOString() ?? null,
         subscriptionEndDate: c.subscriptionEndDate?.toISOString() ?? null,
-        subscriptionStatus: noExpiry ? "EXPIRED" : c.subscriptionStatus,
+        subscriptionStatus: getEffectiveSubscriptionStatus(
+          c.subscriptionStatus,
+          c.subscriptionEndDate?.toISOString() ?? null
+        ),
         totalAmount,
         amountPaid: amountPaidFromPayments,
         pendingAmount,
