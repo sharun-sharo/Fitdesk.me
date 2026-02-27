@@ -52,7 +52,7 @@ const FONT = {
 // ============== Helpers ==============
 
 export function formatInvoiceCurrency(amount: number): string {
-  return `₹${amount.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  return `Rs. ${amount.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 function formatInvoiceDate(iso: string): string {
