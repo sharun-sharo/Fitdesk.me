@@ -19,7 +19,11 @@
    Optional:
 
    - `OPENAI_API_KEY` – For AI Insights
-   - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM` – For WhatsApp reminders
+   - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_SMS_FROM` – For SMS reminders (or use DoctorDesk proxy below)
+
+   **Twilio workaround (if FitDesk gets HTTP 403 to Twilio from Railway):** Route SMS through your DoctorDesk backend:
+   - In **DoctorDesk** backend env: set `INTERNAL_SMS_SHARED_SECRET` to a long random secret (e.g. `openssl rand -hex 32`).
+   - In **FitDesk** (Railway) env: set `DOCTORDESK_SMS_URL` to the full DoctorDesk API URL (e.g. `https://your-doctordesk-backend.up.railway.app/api/v1/internal/send-sms`) and `INTERNAL_SMS_SHARED_SECRET` to the same secret. When both are set, FitDesk sends reminders via DoctorDesk instead of calling Twilio directly.
 
 2. **Database**
 

@@ -20,9 +20,38 @@ export type SendSmsOptions = {
 
 /**
  * Send an SMS via Twilio.
- * Requires: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_SMS_FROM (e.g. +16615181820)
+ * If DOCTORDESK_SMS_URL and INTERNAL_SMS_SHARED_SECRET are set, sends via DoctorDesk backend
+ * (workaround for CloudFront 403 when FitDesk cannot reach Twilio directly).
+ * Otherwise requires: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_SMS_FROM (e.g. +16615181820)
  */
 export async function sendSms({ to, body }: SendSmsOptions): Promise<{ sid: string }> {
+  const proxyUrl = process.env.DOCTORDESK_SMS_URL;
+  const sharedSecret = process.env.INTERNAL_SMS_SHARED_SECRET;
+
+  if (proxyUrl && sharedSecret) {
+    const toE164Number = to.startsWith("+") ? to : toE164(to);
+    const res = await fetch(proxyUrl.trim(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Internal-Auth": sharedSecret,
+      },
+      body: JSON.stringify({ to: toE164Number, body }),
+    });
+    const text = await res.text();
+    let data: { success?: boolean; error?: string } = {};
+    try {
+      data = JSON.parse(text);
+    } catch {
+      // non-JSON response
+    }
+    if (!res.ok) {
+      const msg = data.error || text || res.statusText || "Proxy SMS request failed";
+      throw new Error(msg);
+    }
+    return { sid: "" };
+  }
+
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const from = process.env.TWILIO_SMS_FROM;
