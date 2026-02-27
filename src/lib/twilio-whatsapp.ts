@@ -52,9 +52,16 @@ export async function sendSms({ to, body }: SendSmsOptions): Promise<{ sid: stri
     body: params.toString(),
   });
 
-  const data = (await res.json().catch(() => ({}))) as { sid?: string; message?: string; error_message?: string };
+  const text = await res.text();
+  let data: { sid?: string; message?: string; error_message?: string } = {};
+  try {
+    data = JSON.parse(text);
+  } catch {
+    // non-JSON response, keep raw text
+  }
   if (!res.ok) {
-    const msg = data.message || data.error_message || res.statusText || "Twilio SMS request failed";
+    console.error("Twilio SMS error:", res.status, text);
+    const msg = data.message || data.error_message || text || res.statusText || "Twilio SMS request failed";
     throw new Error(msg);
   }
 
